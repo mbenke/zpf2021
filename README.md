@@ -1,6 +1,6 @@
-## Materiały do wykładu "Zaawansowane Programowanie Funkcyjne" Wydział MIM UW 2019/20
+## Materiały do wykładu "Zaawansowane Programowanie Funkcyjne" Wydział MIM UW 2020/21
 
-## "Advanced Functional Programming" course materials, MIMUW 2019/20
+## "Advanced Functional Programming" course materials, MIMUW 2020/21
 
 * Generated Lecture notes in the www subdir, source in Slides
 * Generating lecture notes and slides needs pandoc
@@ -43,4 +43,3 @@ stack install pandoc
 ~~~~
 
 Installing `pandoc` is optional, there are prebuilt HTML files in the `www` folder (or you can just read markdown).
-
