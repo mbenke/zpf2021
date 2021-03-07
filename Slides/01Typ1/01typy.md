@@ -38,7 +38,7 @@ $ cabal update
 $ cabal install pandoc
 $ PATH=~/.cabal/bin:$PATH            # Linux
 $ PATH=~/Library/Haskell/bin:$PATH   # OS X
-$ git clone git://github.com/mbenke/zpf2020.git && cd zpf2020
+$ git clone git://github.com/mbenke/zpf2021.git && cd zpf2021
 $ make
 ~~~~~
 
@@ -54,10 +54,10 @@ export PATH=$(stack path --local-bin):$PATH
 On students machine, using system GHC:
 
 ~~~~
-export STACK="/home/students/inf/PUBLIC/MRJP/Stack/stack --system-ghc --resolver lts-13.19"
+export STACK="/home/students/inf/PUBLIC/MRJP/Stack/stack --system-ghc --resolver lts-12.26"
 $STACK setup
 $STACK config set system-ghc --global true
-$STACK config set resolver lts-13.19
+$STACK config set resolver lts-12.26
 $STACK upgrade --force-download  # or cp stack executable to your path
 #  ...
 #  Should I try to perform the file copy using sudo? This may fail
@@ -78,7 +78,7 @@ stack install pandoc
 Downloading the latest package list
   from hackage.haskell.org
 [ben@students Haskell]$ cabal install GLFW
-...kompilacja...
+...compiling...
 Installing library in
  /home/staff/iinf/ben/.cabal/lib/GLFW-0.4.2/ghc-6.10.4
 Registering GLFW-0.4.2...
@@ -116,19 +116,23 @@ In newer cabal versions partially solved by sandboxing and `cabal new-install`
 > Stackage is a stable source of Haskell packages. We guarantee that packages build consistently and pass tests before generating nightly and Long Term Support (LTS) releases.
 
 ```
-LTS 15.0 for ghc-8.8.2, published a week ago
-LTS 14.27 for ghc-8.6.5, published a week ago
-LTS 13.19 for ghc-8.6.4, published 10 months ago
-LTS 13.11 for ghc-8.6.3, published 12 months ago
-LTS 12.26 for GHC 8.4.4, published a month ago
-LTS 12.14 for GHC 8.4.3, published 4 months ago
-LTS 11.22 for GHC 8.2.2, published 6 months ago
-LTS 9.21 for GHC 8.0.2, published a year ago
-LTS 7.24 for GHC 8.0.1, published a year ago
-LTS 6.35 for GHC 7.10.3, published a year ago
-LTS 3.22 for GHC 7.10.2, published 3 years ago
-LTS 2.22 for GHC 7.8.4, published 4 years ago
-LTS 0.7 for GHC 7.8.3, published 4 years ago
+LTS 17.5 for ghc-8.10.4, published 3 days ago
+LTS 17.2 for ghc-8.10.3, published 4 weeks ago
+LTS 16.31 for ghc-8.8.4, published a month ago
+LTS 16.11 for ghc-8.8.3, published 6 months ago
+LTS 15.3 for ghc-8.8.2, published a year ago
+LTS 14.27 for ghc-8.6.5, published a year ago
+LTS 13.19 for ghc-8.6.4, published a year ago
+LTS 13.11 for ghc-8.6.3, published 2 years ago
+LTS 12.26 for ghc-8.4.4, published 2 years ago
+LTS 12.14 for ghc-8.4.3, published 2 years ago
+LTS 11.22 for ghc-8.2.2, published 3 years ago
+LTS 9.21 for ghc-8.0.2, published 3 years ago
+LTS 7.24 for ghc-8.0.1, published 4 years ago
+LTS 6.35 for ghc-7.10.3, published 4 years ago
+LTS 3.22 for ghc-7.10.2, published 5 years ago
+LTS 2.22 for ghc-7.8.4, published 6 years ago
+LTS 0.7 for ghc-7.8.3, published 6 years ago
 ```
 
 ```
@@ -170,17 +174,19 @@ $ stack exec hello-exe
 someFunc
 ```
 
-# Stack - exercises
-
 1.  On your own machine:
     * Install `stack`
-    * Install GHC 7.10 using `stack setup`
+    * Install GHC 8.10 using `stack setup`
     * Install GHC 8.6 using `stack setup`
-    * Run `stack ghci` with ver 7.10 and 8
+    * Run `stack ghci` with ver 8.10 and 8.6
     * Build and run hello project, modify it a little
 
-2. On students you can try the same, but quota can be a problem, so use system ghc instead.
-
+2. On students
+    * You can try the same, but quota problem possible
+    * `stack setup` with system GHC 8.6
+    * `stack config set system-ghc --global true`
+    * ` stack config set resolver lts-12.26`
+    * Rest as above
 
 # Functional languages
 * dynamically typed, strict, impure: e.g. Lisp
