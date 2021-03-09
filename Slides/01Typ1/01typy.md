@@ -210,7 +210,7 @@ f x = ?
 
 If `f x` gives a result, it must be `x`
 
-* Philip Wadler "Theorems for Free"
+* Philip Wadler ["Theorems for Free"](http://ecee.colorado.edu/ecen5533/fall11/reading/free.pdf)
 
 * `h :: a -> IO b` constructs a computation with possible side effects
 
