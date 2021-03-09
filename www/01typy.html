@@ -729,7 +729,7 @@ problem3 <span class="fu">=</span> ins2 <span class="dt">True</span> <span class
 f t x y <span class="fu">=</span> <span class="kw">if</span> t <span class="kw">then</span>  x <span class="fu">*</span> (<span class="dt">Vec</span> [y]) <span class="kw">else</span> y</code></pre></div>
 <p>What is the type of <code>f</code>? Let <code>x::a</code>, <code>y::b</code>.</p>
 <p>Then the result type of <code>f</code> is <code>b</code> and we need an instance of <code>Mul a (Vec b) b</code></p>
-<p>Now Z kolei <code>a b -&gt; c</code> implies <code>b ~ Vec c</code> for some <code>c</code>, so we are lookng for an instance</p>
+<p>Now <code>a b -&gt; c</code> implies <code>b ~ Vec c</code> for some <code>c</code>, so we are looking for an instance</p>
 <pre><code>Mul a (Vec (Vec c)) (Vec c)</code></pre>
 <p>applying the rule <code>Mul a b c =&gt; Mul a (Vec b) (Vec c)</code> leads to <code>Mul a (Vec c) c</code>.</p>
 <p>...and so on</p>

@@ -927,8 +927,7 @@ What is the type of `f`? Let `x::a`, `y::b`.
 
 Then the result type of `f` is `b` and we need an instance of `Mul a (Vec b) b`
 
-Now
-Z kolei `a b -> c` implies `b ~ Vec c` for some `c`, so we are lookng for an instance
+Now  `a b -> c` implies `b ~ Vec c` for some `c`, so we are looking for an instance
 
 ~~~~
 Mul a (Vec (Vec c)) (Vec c)
