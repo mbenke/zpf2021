@@ -63,9 +63,9 @@ module QuickCheck11 -- to suit the filename
   , Property      -- :: *
 
   -- For writing your own driver
-  , Result(..)	 -- :: data
-  , generate	 -- :: Int -> StdGen -> Gen a -> a
-  , evaluate     -- :: Testable a => a -> Gen Result
+  , Result(..)    -- :: data
+  , generate      -- :: Int -> StdGen -> Gen a -> a
+  , evaluate      -- :: Testable a => a -> Gen Result
   )
  where
 
@@ -73,7 +73,7 @@ import Prelude
 
 import System.Random
 import Data.List( group, sort, intersperse )
-import Control.Monad( liftM2, liftM3, liftM4 )
+import Control.Monad( ap, liftM2, liftM3, liftM4 )
 
 infixr 0 ==>
 infix  1 `classify`
@@ -115,6 +115,10 @@ instance Monad Gen where
     Gen (\n r0 -> let (r1,r2) = split r0
                       Gen m'  = k (m n r1)
                    in m' n r2)
+
+instance Applicative Gen where
+  pure = return
+  (<*>) = ap
 
 -- derived
 

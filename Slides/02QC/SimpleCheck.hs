@@ -10,7 +10,7 @@ import System.Random
   -- instance RandomGen StdGen
   )
 import Data.List( group, sort, intersperse )
-import Control.Monad( liftM2, liftM3, liftM4 )
+import Control.Monad(ap, liftM2, liftM3, liftM4 )
 
 -- infixr 0 ==>
 -- infix  1 `classify`
@@ -28,6 +28,9 @@ instance Monad Gen where
 instance Functor Gen where
   fmap f m = m >>= return . f        
 
+instance Applicative Gen where
+  pure a =  Gen $ \n r -> a
+  (<*>) = ap
 
 rand :: Gen StdGen
 rand = Gen (\n r -> r)
