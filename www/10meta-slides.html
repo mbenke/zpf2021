@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Marcin Benke" />
+  <meta name="date" content="2021-05-11" />
+  <title>Advanced Functional Programming</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <script src="http://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Advanced Functional Programming</h1>
+  <p class="subtitle">Template Haskell</p>
+  <p class="author">
+Marcin Benke
+  </p>
+  <p class="date">May 11, 2021</p>
+</div>
+<div id="metaprogramming---template-haskell" class="slide section level1">
+<h1>Metaprogramming - Template Haskell</h1>
+<p>Code for today is on github:</p>
+<ul>
+<li>Code/TH/Here - multiline strings with TH (aka here docs)</li>
+<li>Code/TH/Projections - building declarations in TH</li>
+<li>Code/TH/QQ - quasiquotation</li>
+</ul>
+</div>
+<div id="problem-multiline-strings" class="slide section level1">
+<h1>Problem: multiline strings</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">showClass ::</span> [<span class="dt">Method</span>] <span class="ot">-&gt;</span> <span class="dt">String</span>
+showClass ms <span class="fu">=</span> <span class="st">&quot;\</span>
+<span class="st">\.class  public Instant\n\</span>
+<span class="st">\.super  java/lang/Object\n\</span>
+<span class="st">\\n\</span>
+<span class="st">\;\n\</span>
+<span class="st">\; standard initializer\n\</span>
+<span class="st">\.method public &lt;init&gt;()V\n\</span>
+<span class="st">\   aload_0\n\</span>
+<span class="st">\   invokespecial java/lang/Object/&lt;init&gt;()V\n\</span>
+<span class="st">\   return\n\</span>
+<span class="st">\.end method\n&quot;</span> <span class="fu">++</span> unlines (map showMethod ms)</code></pre></div>
+</div>
+<div id="template-haskell" class="slide section level1">
+<h1>Template Haskell</h1>
+<p>Multiline strings in Haskell according to Haskell Wiki:</p>
+<pre><code>{-# LANGUAGE QuasiQuotes #-}
+module Main where
+import Str
+
+longString = [str|This is a multiline string.
+It contains embedded newlines. And Unicode:
+
+Ἐν ἀρχῇ ἦν ὁ Λόγος
+
+It ends here: |]
+
+main = putStrLn longString
+</code></pre>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Str</span>(str) <span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH.Quote</span>
+
+str <span class="fu">=</span> <span class="dt">QuasiQuoter</span> { quoteExp <span class="fu">=</span> stringE }</code></pre></div>
+<p>Let's try to understand how it works...</p>
+</div>
+<div id="parsing-haskell-code-at-runtime" class="slide section level1">
+<h1>Parsing Haskell code at runtime</h1>
+<p>Quotations - <code>[q| ... |]</code> are a mechanism for generating ASTs. The quasiquoter <code>q</code> determines how the bracket content is parsed (default is <code>e</code> for Haskell expressions).</p>
+<p>We can do some experiments in GHCi (following this <a href="https://web.archive.org/web/20180501004533/http://www.hyperedsoftware.com:80/blog/entries/first-stab-th.html">tutorial</a>)</p>
+<pre><code>$ ghci -XTemplateHaskell
+# or using stack:
+# stack ghci --ghci-options -XTemplateHaskell
+
+&gt; :m +Language.Haskell.TH
+&gt; runQ [| \x -&gt; 1 |]
+
+LamE [VarP x_0] (LitE (IntegerL 1))
+
+&gt; :t it
+it :: Exp
+
+&gt; :i Exp
+data Exp
+  = VarE Name
+  | ConE Name
+  | LitE Lit
+...
+    -- Defined in ‘Language.Haskell.TH.Syntax’
+
+&gt; runQ [| \x -&gt; x + 1 |]  &gt;&gt;= putStrLn . pprint
+\x_0 -&gt; x_0 GHC.Num.+ 1</code></pre>
+</div>
+<div id="the-q-monad" class="slide section level1">
+<h1>The Q monad</h1>
+<p>Code generation requires certain supporting features:</p>
+<ul>
+<li>ability to generate new unique names</li>
+<li>ability to retrieve information about an entity</li>
+<li>custom state shared by all TH code in the same module</li>
+<li>ability to run IO during compilation (e.g. to read a file)</li>
+</ul>
+<p>These features are supplied by a monad called <code>Q</code> (for quotation).</p>
+<pre><code>&gt; :t [| \x -&gt; 1 |]
+[| \x -&gt; 1 |] :: ExpQ
+&gt; :i ExpQ
+type ExpQ = Q Exp   -- Defined in ‘Language.Haskell.TH.Lib.Internal’
+
+&gt; :i Q
+newtype Q a = ... -- Defined in ‘Language.Haskell.TH.Syntax’
+instance Monad Q</code></pre>
+</div>
+<div id="q-runq" class="slide section level1">
+<h1>Q, runQ</h1>
+<pre><code>&gt; :t runQ
+runQ :: Language.Haskell.TH.Syntax.Quasi m =&gt; Q a -&gt; m a
+
+&gt;: i Quasi
+class (MonadIO m, MonadFail m) =&gt; Quasi m where ...
+instance Quasi Q
+instance Quasi IO</code></pre>
+<p>Basically <code>runQ</code> can be used to evaluate <code>Q</code> computations both in the <code>Q</code> context (natural habitat) and the <code>IO</code> context (useful for experimentation).</p>
+<!--
+(curious about `type role Q nominal`? - see e.g. this [question](https://stackoverflow.com/questions/49209788/simplest-examples-demonstrating-the-need-for-nominal-type-role-in-haskell)
+-->
+</div>
+<div id="splicing-structure-trees-into-a-program" class="slide section level1">
+<h1>Splicing structure trees into a program</h1>
+<pre><code>&gt; runQ [| succ 1 |]
+AppE (VarE GHC.Enum.succ) (LitE (IntegerL 1))
+
+&gt; $(return it)
+2
+
+&gt; int = LitE . IntegerL
+&gt; $(return (int 42))
+42
+
+&gt; 1 + $(return (int 41))
+42</code></pre>
+<p>but:</p>
+<pre><code>&gt; $(return (AppE (VarE GHC.Enum.succ) (LitE (IntegerL 1))))
+
+&lt;interactive&gt;: error:
+    Couldn&#39;t match expected type ‘Name’ with actual type ‘a0 -&gt; a0’
+    Probable cause: ‘succ’ is applied to too few arguments
+    In the first argument of ‘VarE’, namely ‘succ’
+    In the first argument of ‘AppE’, namely ‘(VarE succ)’
+&gt; $(return (AppE (VarE &quot;GHC.Enum.succ&quot;) (LitE (IntegerL 1))))
+&lt;interactive&gt;: error:
+    • Couldn&#39;t match expected type ‘Name’ with actual type ‘[Char]’
+&gt; :t VarE
+VarE :: Name -&gt; Exp</code></pre>
+<p><code>VarE</code> needs a <code>Name</code></p>
+</div>
+<div id="making-a-name-from-string" class="slide section level1">
+<h1>Making a Name from String</h1>
+<p><code>VarE</code> needs a <code>Name</code></p>
+<pre><code>&gt; :t VarE
+VarE :: Name -&gt; Exp
+
+&gt; :t mkName
+mkName :: String -&gt; Name
+
+&gt; $( return (AppE (VarE (mkName &quot;succ&quot;)) (LitE (IntegerL 1))))
+2
+</code></pre>
+</div>
+<div id="names-patterns-declarations" class="slide section level1">
+<h1>Names, patterns, declarations</h1>
+<p>So far, we have been building expressions, but we can build patterns, declarations, etc.:</p>
+<pre><code>&gt; runQ [d| p1 (a,b) = a |]
+[FunD p1_0 [Clause [TupP [VarP a_1,VarP b_2]] (NormalB (VarE a_1)) []]]</code></pre>
+<p><code>FunD</code> etc - see <a href="https://hackage.haskell.org/package/template-haskell-2.14.0.0/docs/Language-Haskell-TH.html#g:18">documentation</a>.</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Clause</span> <span class="fu">=</span> <span class="dt">Clause</span> [<span class="dt">Pat</span>] <span class="dt">Body</span> [<span class="dt">Dec</span>]  <span class="co">-- f pats = b where decs</span>
+<span class="kw">data</span> <span class="dt">Dec</span>                               <span class="co">-- declaration</span>
+  <span class="fu">=</span> <span class="dt">FunD</span> <span class="dt">Name</span> [<span class="dt">Clause</span>]        
+  <span class="fu">...</span></code></pre></div>
+<p>Let us now try to build such a definition ourselves.</p>
+<p>Note that we need to use two modules, since definitions to be run during compilation have to be imported from a different module --- the code to be run needs to be compiled first.</p>
+<p>Otherwise you may see an error like</p>
+<pre><code>GHC stage restriction:
+      ‘build_p1’ is used in a top-level splice, quasi-quote, or annotation,
+      and must be imported, not defined locally</code></pre>
+</div>
+<div id="build1" class="slide section level1">
+<h1>Build1</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# START_FILE Build1.hs #-}</span>
+<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="kw">module</span> <span class="dt">Build1</span> <span class="kw">where</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+
+<span class="co">-- p1 (a,b) = a</span>
+<span class="ot">build_p1 ::</span> <span class="dt">Q</span> [<span class="dt">Dec</span>]
+build_p1 <span class="fu">=</span> return
+    [ <span class="dt">FunD</span> p1
+             [ <span class="dt">Clause</span> [<span class="dt">TupP</span> [<span class="dt">VarP</span> a,<span class="dt">VarP</span> b]] (<span class="dt">NormalB</span> (<span class="dt">VarE</span> a)) []
+             ]
+    ] <span class="kw">where</span>
+       p1 <span class="fu">=</span> mkName <span class="st">&quot;p1&quot;</span>
+       a <span class="fu">=</span> mkName <span class="st">&quot;a&quot;</span>
+       b <span class="fu">=</span> mkName <span class="st">&quot;b&quot;</span>
+
+<span class="ot">{-# START_FILE Declare1.hs #-}</span>
+<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+<span class="kw">import </span><span class="dt">Build1</span>
+
+<span class="fu">$</span>(build_p1)
+
+main <span class="fu">=</span> print <span class="fu">$</span> p1 (<span class="dv">1</span>,<span class="dv">2</span>)</code></pre></div>
+</div>
+<div id="printing-the-declarations-we-built" class="slide section level1">
+<h1>Printing the declarations we built</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import </span><span class="dt">Build1</span>
+
+<span class="fu">$</span>(build_p1)
+
+<span class="ot">pprLn ::</span> <span class="dt">Ppr</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+pprLn <span class="fu">=</span> putStrLn <span class="fu">.</span> pprint
+<span class="co">-- pprint :: Ppr a =&gt; a -&gt; String</span>
+
+main <span class="fu">=</span> <span class="kw">do</span>
+  decs <span class="ot">&lt;-</span> runQ build_p1
+  pprLn decs
+  print <span class="fu">$</span> p1(<span class="dv">1</span>,<span class="dv">2</span>)</code></pre></div>
+<pre><code>p1 (a, b) = a
+1</code></pre>
+<p>Reminder about <code>runQ</code>:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> <span class="dt">Quasi</span> m <span class="kw">where</span> <span class="fu">...</span>
+<span class="kw">instance</span> <span class="dt">Quasi</span> <span class="dt">Q</span> <span class="kw">where</span> <span class="fu">...</span>
+<span class="kw">instance</span> <span class="dt">Quasi</span> <span class="dt">IO</span> <span class="kw">where</span> <span class="fu">...</span>
+<span class="ot">runQ ::</span> <span class="dt">Quasi</span> m <span class="ot">=&gt;</span> <span class="dt">Q</span> a <span class="ot">-&gt;</span> m a</code></pre></div>
+</div>
+<div id="fresh-names" class="slide section level1">
+<h1>Fresh names</h1>
+<p>Building and transforming structure trees for a language with bindings is complicated because of possible name conflicts.</p>
+<p>Luckily, TH provides the function <a href="https://hackage.haskell.org/packages/archive/template-haskell/2.14.0.0/doc/html/Language-Haskell-TH.html#v:newName">newName</a>:</p>
+<pre><code>newName :: String -&gt; Q Name
+
+&gt; runQ ((,) &lt;$&gt; newName &quot;x&quot; &lt;*&gt; newName &quot;x&quot; )
+(x_1,x_2)</code></pre>
+<p>(which, by the way, explains one of the reasons why <a href="https://hackage.haskell.org/packages/archive/template-haskell/2.14.0.0/doc/html/Language-Haskell-TH.html#t:Q">Q</a> needs to be a monad).</p>
+<p>Using <code>newName</code> we can safeguard our code against name clashes.</p>
+<p>Note, however, that <code>p1</code> is global and must use <code>mkName</code>, while <code>a</code> and <code>b</code> are locals, so we shall generate them using <code>newName</code>.</p>
+</div>
+<div id="build2" class="slide section level1">
+<h1>Build2</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# START_FILE Build2.hs #-}</span>
+<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="kw">module</span> <span class="dt">Build2</span> <span class="kw">where</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+
+<span class="ot">build_p1 ::</span> <span class="dt">Q</span> [<span class="dt">Dec</span>]
+build_p1 <span class="fu">=</span> <span class="kw">do</span>
+  <span class="kw">let</span> p1 <span class="fu">=</span> mkName <span class="st">&quot;p1&quot;</span>
+  a <span class="ot">&lt;-</span> newName <span class="st">&quot;a&quot;</span>
+  b <span class="ot">&lt;-</span> newName <span class="st">&quot;b&quot;</span>
+  return
+    [ <span class="dt">FunD</span> p1
+             [ <span class="dt">Clause</span> [<span class="dt">TupP</span> [<span class="dt">VarP</span> a,<span class="dt">VarP</span> b]] (<span class="dt">NormalB</span> (<span class="dt">VarE</span> a)) []
+             ]
+    ]
+
+<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+<span class="kw">import </span><span class="dt">Build2</span>
+
+<span class="fu">$</span>(build_p1)
+
+main <span class="fu">=</span> print <span class="fu">$</span> p1 (<span class="dv">1</span>,<span class="dv">2</span>)</code></pre></div>
+</div>
+<div id="typical-th-use" class="slide section level1">
+<h1>Typical TH use</h1>
+<p>Let us define all projections for large (say 16-) tuples. Writing this by hand is no fun, but TH helps avoid the boilerplate.</p>
+<p>Here we start by pairs, but extending it to larger tuples is a simple exercise.</p>
+<p>An auxiliary function building a simple declaration may come handy, e.g.</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">simpleFun name pats rhs <span class="fu">=</span> <span class="dt">FunD</span> name [<span class="dt">Clause</span> pats (<span class="dt">NormalB</span> rhs) []]</code></pre></div>
+<p>Given a function such that <code>build_p n</code> builds the nth projection, we can build them all using <code>mapM</code></p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">build_ps <span class="fu">=</span> mapM build_p [<span class="dv">1</span>,<span class="dv">2</span>]</code></pre></div>
+<p>Then we may splice the definitions into the program</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="fu">$</span>(build_ps)
+
+main <span class="fu">=</span> mapM_ print
+  [ p2_1 (<span class="dv">1</span>,<span class="dv">2</span>)
+  , p2_2 (<span class="dv">1</span>,<span class="dv">2</span>)
+  ]</code></pre></div>
+</div>
+<div id="build3" class="slide section level1">
+<h1>Build3</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# START_FILE Build3.hs #-}</span>
+<span class="kw">module</span> <span class="dt">Build3</span> <span class="kw">where</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+
+<span class="ot">simpleFun ::</span> <span class="dt">Name</span> <span class="ot">-&gt;</span> [<span class="dt">Pat</span>] <span class="ot">-&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">Dec</span>
+simpleFun name pats rhs <span class="fu">=</span> <span class="dt">FunD</span> name [<span class="dt">Clause</span> pats (<span class="dt">NormalB</span> rhs) []]
+
+build_ps <span class="fu">=</span> mapM build_p [<span class="dv">1</span>,<span class="dv">2</span>] <span class="kw">where</span>
+    fname n <span class="fu">=</span> mkName <span class="fu">$</span> <span class="st">&quot;p2_&quot;</span> <span class="fu">++</span> show n
+    build_p n <span class="fu">=</span> <span class="kw">do</span>
+        argNames <span class="ot">&lt;-</span> mapM newName (replicate <span class="dv">2</span> <span class="st">&quot;a&quot;</span>)
+        <span class="kw">let</span> args <span class="fu">=</span> map <span class="dt">VarP</span> argNames
+        return <span class="fu">$</span> simpleFun (fname n) [<span class="dt">TupP</span> args] (<span class="dt">VarE</span> (argNames <span class="fu">!!</span> (n<span class="fu">-</span><span class="dv">1</span>)))
+
+<span class="ot">{-# START_FILE Declare3.hs #-}</span>
+<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+
+<span class="kw">import </span><span class="dt">Build3</span>
+build_ps <span class="co">-- one may omit $(...) for declarations</span>
+
+main <span class="fu">=</span> mapM_ print
+    [ p2_1 (<span class="dv">1</span>,<span class="dv">2</span>)
+    , p2_2 (<span class="dv">1</span>,<span class="dv">2</span>)
+    ]</code></pre></div>
+<pre><code>1
+2</code></pre>
+</div>
+<div id="quote-eval-quasiquote" class="slide section level1">
+<h1>Quote, eval, quasiquote</h1>
+<p>In Lisp we have quote: <code>'</code> (<code>code -&gt; data</code>)</p>
+<pre><code>(+ 1 1)         =&gt; 2
+&#39;(+ 1 1)        =&gt; (list &#39;+ 1 1)
+(eval &#39;(+ 1 1)) =&gt; 2
+(1 2 3)         ERROR
+&#39;(1 2 3)        =&gt; (list 1 2 3)
+&#39;(1 (+ 1 1) 3)  =&gt; (list 1 &#39;(+ 1 1) 3)</code></pre>
+<p>and a slightly more involved quasiquote/unquote pair: <code>`/,</code> (backtick/comma)</p>
+<pre><code>`(1 ,(+ 1 1) 3) =&gt; (list 1 2 3)</code></pre>
+<p>enabling us to evaluate some fragments inside quoted code.</p>
+<p>In Lisp there are only S-expressions, Haskell syntax is more complex:</p>
+<ul>
+<li>expressions</li>
+<li>patterns</li>
+<li>types</li>
+<li>declarations</li>
+</ul>
+</div>
+<div id="quasiquoting" class="slide section level1">
+<h1>Quasiquoting</h1>
+<p>We have seen the standard quasiquoters e, t, d, p (e.g. <code>[e| \x -&gt; x +1|]</code> ). We can also define our own:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">longString <span class="fu">=</span> [str|This is a multiline string.
+It contains embedded newlines. And Unicode:
+
+Ἐν ἀρχῇ ἦν ὁ Λόγος
+
+It ends here: |]
+
+main <span class="fu">=</span> putStrLn longString</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Str</span>(str) <span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Language.Haskell.TH</span>
+<span class="kw">import </span><span class="dt">Language.Haskell.TH.Quote</span>
+
+str <span class="fu">=</span> <span class="dt">QuasiQuoter</span> { quoteExp <span class="fu">=</span> stringE }</code></pre></div>
+<ul>
+<li><code>stringE</code> builds a string literal expression</li>
+<li><code>str</code> quasiquoter, when used in expression context, splices this literal</li>
+</ul>
+</div>
+<div id="the-quasiquoter-type" class="slide section level1">
+<h1>The QuasiQuoter type</h1>
+<pre><code>&gt; :i QuasiQuoter
+data QuasiQuoter
+  = QuasiQuoter {quoteExp :: String -&gt; Q Exp,
+                 quotePat :: String -&gt; Q Pat,
+                 quoteType :: String -&gt; Q Type,
+                 quoteDec :: String -&gt; Q [Dec]}
+    -- Defined in ‘Language.Haskell.TH.Quote’</code></pre>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">str <span class="fu">=</span> <span class="dt">QuasiQuoter</span> { quoteExp <span class="fu">=</span> stringE }</code></pre></div>
+<p>We intend to use <code>str</code> only in expression contexts, so we leave the other parts undefined.</p>
+</div>
+<div id="parsing-expressions" class="slide section level1">
+<h1>Parsing Expressions</h1>
+<p>Let's start with a simple data type and parser for arithmetic expressions</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE DeriveDataTypeable #-}</span>
+
+<span class="kw">data</span> <span class="dt">Expr</span> <span class="fu">=</span> <span class="dt">EInt</span> <span class="dt">Int</span>
+  <span class="fu">|</span> <span class="dt">EAdd</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+  <span class="fu">|</span> <span class="dt">ESub</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+  <span class="fu">|</span> <span class="dt">EMul</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+  <span class="fu">|</span> <span class="dt">EDiv</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+    <span class="kw">deriving</span>(<span class="dt">Show</span>,<span class="dt">Typeable</span>,<span class="dt">Data</span>)
+<span class="co">-- deriving Data needed to use generic function</span>
+<span class="co">-- liftData :: Data a =&gt; a -&gt; ExpQ</span>
+
+<span class="ot">pExpr ::</span> <span class="dt">Parser</span> <span class="dt">Expr</span>
+<span class="co">-- ...</span>
+
+test1 <span class="fu">=</span> parse pExpr <span class="st">&quot;test1&quot;</span> <span class="st">&quot;1 - 2 - 3 * 4 &quot;</span>
+main <span class="fu">=</span> print test1</code></pre></div>
+<pre><code>Right (ESub (ESub (EInt 1) (EInt 2)) (EMul (EInt 3) (EInt 4)))</code></pre>
+</div>
+<div id="building-test-cases" class="slide section level1">
+<h1>Building test cases</h1>
+<p>Now let's say we need some expresion trees in our program. For this kind of expressions we could (almost) get by with <code>class Num</code> hack:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Num</span> <span class="dt">Expr</span> <span class="kw">where</span>
+  fromInteger <span class="fu">=</span> <span class="dt">EInt</span> <span class="fu">.</span> fromInteger
+  (<span class="fu">+</span>) <span class="fu">=</span> <span class="dt">EAdd</span>
+  (<span class="fu">*</span>) <span class="fu">=</span> <span class="dt">EMul</span>
+  (<span class="fu">-</span>) <span class="fu">=</span> <span class="dt">ESub</span>
+
+<span class="ot">testExpr ::</span> <span class="dt">Expr</span>
+testExpr <span class="fu">=</span> (<span class="dv">2</span> <span class="fu">+</span> <span class="dv">2</span>) <span class="fu">*</span> <span class="dv">3</span></code></pre></div>
+<p>...but it is neither extensible nor, in fact, nice.</p>
+</div>
+<div id="building-test-cases-via-parsing" class="slide section level1">
+<h1>Building test cases via parsing</h1>
+<p>Of course as soon as we have a parser ready we could use it to build expressions</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">testExpr <span class="fu">=</span> parse pExpr <span class="st">&quot;testExpr&quot;</span> <span class="st">&quot;1+2*3&quot;</span></code></pre></div>
+<p>...but then potential errors in the expression texts remain undetected until runtime, and also this is not flexible enough: what if we wanted a simplifier for expressions, along the lines of</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">simpl ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span>
+simpl (<span class="dt">EAdd</span> (<span class="dt">EInt</span> <span class="dv">0</span>) x) <span class="fu">=</span> x</code></pre></div>
+</div>
+<div id="why-its-good-to-be-quasiquoted" class="slide section level1">
+<h1>Why it's good to be Quasiquoted</h1>
+<p>what if we could instead write</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">simpl ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span>
+simpl (<span class="dv">0</span> <span class="fu">+</span> x) <span class="fu">=</span> x</code></pre></div>
+<p>turns out with quasiquotation we can do just that (albeit with a slightly different syntax), so to whet your appetite:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">simpl ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span>
+simpl [expr|0 + $x|] <span class="fu">=</span> x
+
+main <span class="fu">=</span> print <span class="fu">$</span> simpl [expr|0+2|]
+<span class="co">-- ...</span>
+<span class="ot">expr  ::</span> <span class="dt">QuasiQuoter</span>
+expr  <span class="fu">=</span>  <span class="dt">QuasiQuoter</span>
+  { quoteExp <span class="fu">=</span> quoteExprExp
+  , quotePat <span class="fu">=</span> quoteExprPat
+  }</code></pre></div>
+<p>Let us start with the (perhaps simplest) quasiquoter for expressions:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">quoteExprExp ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Q</span> <span class="dt">Exp</span>
+quoteExprExp s <span class="fu">=</span> <span class="kw">do</span>
+  pos <span class="ot">&lt;-</span> getPosition
+  exp <span class="ot">&lt;-</span> parseExp pos s
+  exprToExpQ exp</code></pre></div>
+</div>
+<div id="quasiquoting-expressions" class="slide section level1">
+<h1>Quasiquoting Expressions</h1>
+<p>There are three steps:</p>
+<ul>
+<li>record the current position in Haskell file (for parse error reporting);</li>
+<li>parse the expression into our abstract syntax;</li>
+<li>convert our abstract syntax to its Template Haskell representation.</li>
+</ul>
+<p>The first step is accomplished using <a href="http://hackage.haskell.org/packages/archive/template-haskell/2.14.0.0/doc/html/Language-Haskell-TH.html#v:location">Language.Haskell.TH.location</a> and converting it to something usable by Parsec:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">getPosition <span class="fu">=</span> fmap transPos location <span class="kw">where</span>
+  transPos loc <span class="fu">=</span> (loc_filename loc,
+                  fst (loc_start loc),
+                  snd (loc_start loc))</code></pre></div>
+<p>Parsing is done with our expression parser, but building the Haskell AST is a bit of work.</p>
+</div>
+<div id="building-ast" class="slide section level1">
+<h1>Building AST</h1>
+<p>Next we need to build Haskell AST from expression tree built by our parser:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">exprToExpQ ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Q</span> <span class="dt">Exp</span>
+exprToExpQ (<span class="dt">EInt</span> n) <span class="fu">=</span> return <span class="fu">$</span> <span class="dt">ConE</span> (mkName <span class="st">&quot;EInt&quot;</span>) <span class="fu">$$</span> (intLitE n)
+exprToExpQ (<span class="dt">EAdd</span> e1 e2) <span class="fu">=</span> convertBinE <span class="st">&quot;EAdd&quot;</span> e1 e2
+exprToExpQ (<span class="dt">ESub</span> e1 e2) <span class="fu">=</span> convertBinE <span class="st">&quot;ESub&quot;</span> e1 e2
+exprToExpQ (<span class="dt">EMul</span> e1 e2) <span class="fu">=</span> convertBinE <span class="st">&quot;EMul&quot;</span> e1 e2
+exprToExpQ (<span class="dt">EDiv</span> e1 e2) <span class="fu">=</span> convertBinE <span class="st">&quot;EDiv&quot;</span> e1 e2
+
+convertBinE s e1 e2 <span class="fu">=</span> <span class="kw">do</span>
+  e1&#39; <span class="ot">&lt;-</span> exprToExpQ e1
+  e2&#39; <span class="ot">&lt;-</span> exprToExpQ e2  
+  return <span class="fu">$</span> <span class="dt">ConE</span> (mkName s) <span class="fu">$$</span> e1&#39; <span class="fu">$$</span> e2&#39;</code></pre></div>
+<p>(alternatively we might make our parser return Haskell AST)</p>
+</div>
+<div id="scrap-your-boilerplate" class="slide section level1">
+<h1>Scrap Your Boilerplate</h1>
+<p>This seems like a lot of boilerplate, luckily we can save us some work use facilities for generic programming provided by <a href="http://hackage.haskell.org/package/base/docs/Data-Data.html">Data.Data</a> combined with the Template Haskell function <a href="http://hackage.haskell.org/package/template-haskell-2.14.0.0/docs/Language-Haskell-TH-Syntax.html#v:dataToExpQ">dataToExpQ</a>,</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"> exprToExpQ <span class="fu">=</span>  dataToExpQ (const <span class="dt">Nothing</span>) exp
+<span class="co">-- dataToExpQ :: Data a</span>
+<span class="co">--            =&gt; (forall b. Data b =&gt; b -&gt; Maybe (Q Exp))</span>
+<span class="co">--            -&gt; a -&gt; Q Exp</span>
+<span class="co">-- the first argument provides a way of extending the translation</span></code></pre></div>
+<p>or a simpler <a href="http://hackage.haskell.org/package/template-haskell-2.14.0.0/docs/Language-Haskell-TH-Syntax.html#v:liftData">liftData</a></p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">liftData ::</span> <span class="dt">Data</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Q</span> <span class="dt">Exp</span></code></pre></div>
+</div>
+<div id="quasiquoting-patterns" class="slide section level1">
+<h1>Quasiquoting patterns</h1>
+<p>So far, we are halfway through to our goal: we can use the quasiquoter on the right hand side of function definitions:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">testExpr ::</span> <span class="dt">Expr</span>
+testExpr <span class="fu">=</span> [expr|1+2*3|]</code></pre></div>
+<p>To be able to write things like</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">simpl [expr|0 + $x|] <span class="fu">=</span> x</code></pre></div>
+<p>we need to write a quasiquoter for patterns.</p>
+</div>
+<div id="quasiquoting-constant-patterns" class="slide section level1">
+<h1>Quasiquoting constant patterns</h1>
+<p>Let us start with something less ambitious - a quasiquoter for constant patterns, allowing us to write</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">testExpr ::</span> <span class="dt">Expr</span>
+testExpr <span class="fu">=</span> [expr|1+2*3|]
+
+<span class="ot">f1 ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">String</span>
+f1 [expr| 1 + 2*3 |] <span class="fu">=</span> <span class="st">&quot;Bingo!&quot;</span>
+f1 _ <span class="fu">=</span> <span class="st">&quot;Sorry, no bonus&quot;</span>
+
+main <span class="fu">=</span> putStrLn <span class="fu">$</span> f1 testExpr</code></pre></div>
+<p>This can be done similarly to the quasiquoter for expressions:</p>
+<ul>
+<li>record the current position in Haskell file (for parse error reporting);</li>
+<li>parse the expression into our abstract syntax;</li>
+<li>convert our abstract syntax to its Template Haskell representation.</li>
+</ul>
+</div>
+<div id="building-pattern-ast" class="slide section level1">
+<h1>Building pattern AST</h1>
+<p>This time we need to construct Template Haskell pattern representation:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">quoteExprPat ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">TH.Q</span> <span class="dt">TH.Pat</span>
+quoteExprPat s <span class="fu">=</span> <span class="kw">do</span>
+  pos <span class="ot">&lt;-</span> getPosition
+  exp <span class="ot">&lt;-</span> parseExpr pos s
+  dataToPatQ (const <span class="dt">Nothing</span>) exp</code></pre></div>
+<p>The functions <code>quoteExprExp</code> and <code>quoteExprPat</code> differ in two respects:</p>
+<ul>
+<li>use <code>dataToPatQ</code> instead of <code>dataToExpQ</code></li>
+<li>the result type is different (obviously)</li>
+</ul>
+</div>
+<div id="antiquotation" class="slide section level1">
+<h1>Antiquotation</h1>
+<p>The quasiquotation mechanism we have seen so far allows us to translate domain-specific code into Haskell and &quot;inject&quot; it into our program.</p>
+<p>Antiquotation, as the name suggests goes in the opposite direction: embeds Haskell entities (e.g. variables) in our DSL.</p>
+<p>This sounds complicated, but isn't really. Think HTML templates:</p>
+<div class="sourceCode"><pre class="sourceCode html"><code class="sourceCode html"><span class="kw">&lt;html&gt;</span>
+<span class="kw">&lt;head&gt;</span>
+<span class="kw">&lt;title&gt;</span>#{pageTitle}
+<span class="kw">&lt;body&gt;&lt;h1&gt;</span>#{pageTitle}</code></pre></div>
+<p>The meaning is hopefully obvious --- the value of program variable <code>pageTitle</code> should be embedded in the indicated places. In our expression language we might want to write</p>
+<pre><code>twice :: Expr -&gt; Expr
+twice e = [expr| $e + $e |]
+
+testTwice = twice [expr| 3 * 3|]</code></pre>
+<p>This is nothing revolutionary. Haskell however, uses variables not only in expressions, but also in patterns, and here the story becomes a little interesting.</p>
+</div>
+<div id="extending-quasiquoters" class="slide section level1">
+<h1>Extending quasiquoters</h1>
+<p>Recall the pattern quasiquoter:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">quoteExprPat ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Q</span> <span class="dt">Pat</span>
+quoteExprPat s <span class="fu">=</span> <span class="kw">do</span>
+  pos <span class="ot">&lt;-</span> getPosition
+  exp <span class="ot">&lt;-</span> parseExpr pos s
+  dataToPatQ (const <span class="dt">Nothing</span>) exp</code></pre></div>
+<p>The <code>(const Nothing)</code> is a placeholder for extensions to the standard <code>Data</code> to <code>Pat</code> translation:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">quoteExprPat ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Q</span> <span class="dt">Pat</span>
+quoteExprPat s <span class="fu">=</span> <span class="kw">do</span>
+  pos <span class="ot">&lt;-</span> getPosition
+  exp <span class="ot">&lt;-</span> Expr.parseExpr pos s
+  dataToPatQ (const <span class="dt">Nothing</span> <span class="ot">`extQ`</span> antiExprPat) exp</code></pre></div>
+<p>What are the &quot;extensions&quot;?</p>
+</div>
+<div id="whats-a-function-extension" class="slide section level1">
+<h1>What’s a function extension?</h1>
+<p>You have</p>
+<ul>
+<li><p>a generic function, say</p>
+<pre><code>gen :: Data a =&gt; a -&gt; R</code></pre></li>
+<li><p>a type-specific function, say</p>
+<pre><code>spec :: T -&gt; R</code></pre></li>
+</ul>
+<p>You want a generic function which behaves like spec on values of type T, and like gen on all other values.</p>
+<p>The function <code>extQ</code> does just that.</p>
+<pre><code>extQ :: (Typeable a, Typeable b) =&gt; (a -&gt; r) -&gt; (t -&gt; r) -&gt; a -&gt; r
+
+gen `extQ` spec :: Data a =&gt; a -&gt; R  -- Data is a subclass of Typeable</code></pre>
+<p>(NB <code>extQ</code> comes from <code>Data.Generics</code> and the <code>Q</code> in the name has nothing to do with Template Haskell <code>Q</code> monad)</p>
+</div>
+<div id="extending-datatopatq" class="slide section level1">
+<h1>Extending <code>dataToPatQ</code></h1>
+<pre><code>const Nothing :: b -&gt; Maybe (Q Pat)
+
+extQ :: (Data a, Data t) =&gt; (a -&gt; r) -&gt; (t -&gt; r) -&gt; a -&gt; r
+-- specialized to Data
+
+antiExprPat :: Expr -&gt; Maybe (Q Pat)
+
+const Nothing `extQ` antiExprPat :: forall b.Data b =&gt; b -&gt; Maybe (Q Pat)
+
+dataToPatQ
+  :: Data a =&gt;
+     (forall b.Data b =&gt; b -&gt; Maybe (Q Pat)) -&gt; a -&gt; Q Pat
+-- specialized To Expr
+-- :: (forall b.Data b =&gt; b -&gt; Maybe (Q Pat)) -&gt; Expr -&gt; Q Pat
+
+dataToPatQ (const Nothing `extQ` antiExprPat) :: Expr -&gt; Q Pat</code></pre>
+</div>
+<div id="metavariables" class="slide section level1">
+<h1>Metavariables</h1>
+<p>Let us extend our expression syntax and parser with metavariables (variables from the metalanguage):</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Expr</span> <span class="fu">=</span>  <span class="fu">...</span> <span class="fu">|</span> <span class="dt">EMetaVar</span> <span class="dt">String</span>
+           <span class="kw">deriving</span>(<span class="dt">Show</span>,<span class="dt">Typeable</span>,<span class="dt">Data</span>)
+
+<span class="ot">pExpr ::</span> <span class="dt">Parser</span> <span class="dt">Expr</span>
+pExpr <span class="fu">=</span> pTerm <span class="ot">`chainl1`</span> spaced addop
+
+pTerm <span class="fu">=</span> spaced pFactor <span class="ot">`chainl1`</span> spaced mulop
+pFactor <span class="fu">=</span> pNum <span class="fu">&lt;|&gt;</span> pMetaVar
+
+pMetaVar <span class="fu">=</span> char <span class="ch">&#39;$&#39;</span> <span class="fu">&gt;&gt;</span> <span class="dt">EMetaVar</span> <span class="fu">&lt;$&gt;</span> ident
+
+test1 <span class="fu">=</span> parse pExpr <span class="st">&quot;test1&quot;</span> <span class="st">&quot;1 - 2 - 3 * 4 &quot;</span>
+test2 <span class="fu">=</span> parse pExpr <span class="st">&quot;test2&quot;</span> <span class="st">&quot;$x - $y*$z&quot;</span></code></pre></div>
+</div>
+<div id="antiquoting-metavariables" class="slide section level1">
+<h1>Antiquoting metavariables</h1>
+<p>The antiquoter is defined as an extension for the <code>dataToPatQ</code>:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">antiExprPat ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">Q</span> <span class="dt">Pat</span>)
+antiExprPat (<span class="dt">EMetaVar</span> v) <span class="fu">=</span> <span class="dt">Just</span> <span class="fu">$</span> varP (mkName v)
+antiExprPat _ <span class="fu">=</span> <span class="dt">Nothing</span></code></pre></div>
+<ul>
+<li>metavariables are translated to <code>Just</code> TH variables</li>
+<li>for all the other cases we say <code>Nothing</code> - allowing <code>dataToPatQ</code> use its default rules</li>
+</ul>
+<p>And that's it! Now we can write</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">eval [expr| $a + $b|] <span class="fu">=</span> eval a <span class="fu">+</span> eval b
+eval [expr| $a * $b|] <span class="fu">=</span> eval a <span class="fu">*</span> eval b
+eval (<span class="dt">EInt</span> n) <span class="fu">=</span> n</code></pre></div>
+</div>
+<div id="exercises" class="slide section level1">
+<h1>Exercises</h1>
+<ul>
+<li>Write a function such that build_ps n generates all projections for n-tuples,</li>
+<li><p>Write a function <code>tupleFromList</code> such that</p>
+<pre><code>$(tupleFromList 8) [1..8] == (1,2,3,4,5,6,7,8)</code></pre></li>
+<li>Extend the expression simplifier with more rules.</li>
+<li><p>Add antiquotation to <code>quoteExprExp</code></p></li>
+<li><p>Extend the expression quasiquoter to handle metavariables for numeric constants, allowing to implement simplification rules like</p></li>
+</ul>
+<pre><code>simpl [expr|$int:n$ + $int:m$|] = [expr| $int:m+n$ |]</code></pre>
+<p>(you are welcome to invent your own syntax in place of <code>$int: ... $</code>)</p>
+<ul>
+<li>write a <code>matrix</code> quasiquoter such that</li>
+</ul>
+<pre><code>*MatrixSplice&gt; :{
+*MatrixSplice| [matrix|
+*MatrixSplice| 1 2
+*MatrixSplice| 3 4
+*MatrixSplice| |]
+*MatrixSplice| :}
+[[1,2],[3,4]]</code></pre>
+<p>be careful with blank lines!</p>
+</div>
+</body>
+</html>
