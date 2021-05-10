@@ -283,8 +283,8 @@ main <span class="fu">=</span> <span class="kw">do</span>
 <p>Luckily, TH provides the function <a href="https://hackage.haskell.org/packages/archive/template-haskell/2.14.0.0/doc/html/Language-Haskell-TH.html#v:newName">newName</a>:</p>
 <pre><code>newName :: String -&gt; Q Name
 
-&gt; runQ ((,) &lt;$&gt; newName &quot;x&quot; &lt;*&gt; newName &quot;x&quot; )
-(x_1,x_2)</code></pre>
+&gt; runQ (mapM newName $ replicate 5 &quot;x&quot;)
+[x_2,x_3,x_4,x_5,x_6]</code></pre>
 <p>(which, by the way, explains one of the reasons why <a href="https://hackage.haskell.org/packages/archive/template-haskell/2.14.0.0/doc/html/Language-Haskell-TH.html#t:Q">Q</a> needs to be a monad).</p>
 <p>Using <code>newName</code> we can safeguard our code against name clashes.</p>
 <p>Note, however, that <code>p1</code> is global and must use <code>mkName</code>, while <code>a</code> and <code>b</code> are locals, so we shall generate them using <code>newName</code>.</p>
@@ -455,6 +455,25 @@ testExpr <span class="fu">=</span> (<span class="dv">2</span> <span class="fu">+
 <p>...but then potential errors in the expression texts remain undetected until runtime, and also this is not flexible enough: what if we wanted a simplifier for expressions, along the lines of</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">simpl ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span>
 simpl (<span class="dt">EAdd</span> (<span class="dt">EInt</span> <span class="dv">0</span>) x) <span class="fu">=</span> x</code></pre></div>
+</div>
+<div id="building-test-cases-with-th" class="slide section level1">
+<h1>Building test cases with TH</h1>
+<p>Using TH seemingly makes matters only worse:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">testExpr ::</span> <span class="dt">Expr</span>
+testExpr <span class="fu">=</span> <span class="fu">$</span>(return <span class="fu">$</span> mkAdd (mkInt <span class="dv">0</span>) (mkInt <span class="dv">2</span>))
+
+<span class="ot">simpl ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span>
+simpl <span class="fu">$</span>(return <span class="fu">$</span> mkAddP (mkIntP <span class="dv">0</span>) (<span class="dt">VarP</span> (mkName <span class="st">&quot;x&quot;</span>))) <span class="fu">=</span> x
+
+<span class="ot">mkIntP ::</span> <span class="dt">Integer</span> <span class="ot">-&gt;</span> <span class="dt">Pat</span>
+mkIntP i <span class="fu">=</span> <span class="dt">ConP</span> (mkName <span class="st">&quot;EInt&quot;</span>) [<span class="dt">LitP</span> <span class="fu">$</span> <span class="dt">IntegerL</span> i]
+
+<span class="ot">mkBinP ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Pat</span> <span class="ot">-&gt;</span> <span class="dt">Pat</span> <span class="ot">-&gt;</span> <span class="dt">Pat</span>
+mkBinP s p1 p2 <span class="fu">=</span> <span class="dt">ConP</span> (mkName s) [p1, p2]
+
+<span class="ot">mkAddP ::</span> <span class="dt">Pat</span> <span class="ot">-&gt;</span> <span class="dt">Pat</span> <span class="ot">-&gt;</span> <span class="dt">Pat</span>
+mkAddP <span class="fu">=</span> mkBinP <span class="st">&quot;EAdd&quot;</span></code></pre></div>
+<p>...but there's a better way</p>
 </div>
 <div id="why-its-good-to-be-quasiquoted" class="slide section level1">
 <h1>Why it's good to be Quasiquoted</h1>

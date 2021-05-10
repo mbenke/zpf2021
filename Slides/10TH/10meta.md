@@ -530,6 +530,29 @@ simpl :: Expr -> Expr
 simpl (EAdd (EInt 0) x) = x
 ```
 
+# Building test cases with TH
+
+Using TH seemingly makes matters only worse:
+
+``` haskell
+testExpr :: Expr
+testExpr = $(return $ mkAdd (mkInt 0) (mkInt 2))
+
+simpl :: Expr -> Expr
+simpl $(return $ mkAddP (mkIntP 0) (VarP (mkName "x"))) = x
+
+mkIntP :: Integer -> Pat
+mkIntP i = ConP (mkName "EInt") [LitP $ IntegerL i]
+
+mkBinP :: String -> Pat -> Pat -> Pat
+mkBinP s p1 p2 = ConP (mkName s) [p1, p2]
+
+mkAddP :: Pat -> Pat -> Pat
+mkAddP = mkBinP "EAdd"
+```
+
+...but there's a better way
+
 # Why it's good to be Quasiquoted
 
 what if we could instead write
