@@ -290,8 +290,8 @@ Luckily, TH provides the function
 ```
 newName :: String -> Q Name
 
-> runQ ((,) <$> newName "x" <*> newName "x" )
-(x_1,x_2)
+> runQ (mapM newName $ replicate 5 "x")
+[x_2,x_3,x_4,x_5,x_6]
 ```
 
 (which, by the way, explains one of the reasons why
