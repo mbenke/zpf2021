@@ -1,6 +1,6 @@
 ---
 title: Advanced Functional Programming
-subtitle: Template Haskell
+subtitle: Metaprogramming - Template Haskell, Quasiquotation
 author:  Marcin Benke
 date: May 11, 2021
 ---
