@@ -1,0 +1,758 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Marcin Benke" />
+  <title>Advanced Functional Programming</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #0000ff; } /* Keyword */
+code > span.ch { color: #008080; } /* Char */
+code > span.st { color: #008080; } /* String */
+code > span.co { color: #008000; } /* Comment */
+code > span.ot { color: #ff4000; } /* Other */
+code > span.al { color: #ff0000; } /* Alert */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #008000; font-weight: bold; } /* Warning */
+code > span.cn { } /* Constant */
+code > span.sc { color: #008080; } /* SpecialChar */
+code > span.vs { color: #008080; } /* VerbatimString */
+code > span.ss { color: #008080; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { } /* Variable */
+code > span.cf { color: #0000ff; } /* ControlFlow */
+code > span.op { } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #ff4000; } /* Preprocessor */
+code > span.do { color: #008000; } /* Documentation */
+code > span.an { color: #008000; } /* Annotation */
+code > span.cv { color: #008000; } /* CommentVar */
+code > span.at { } /* Attribute */
+code > span.in { color: #008000; } /* Information */
+  </style>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <script src="http://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Advanced Functional Programming</h1>
+  <p class="subtitle">Pleasure and Pain of Dependent Types in Haskell</p>
+  <p class="author">
+Marcin Benke
+  </p>
+  <p class="date">June 7, 2021</p>
+</div>
+<div class="slide section level1">
+
+<p><meta name="duration" content="80" /></p>
+</div>
+<div id="plan" class="slide section level1">
+<h1>Plan</h1>
+<p><a href="http://homepages.inf.ed.ac.uk/slindley/papers/hasochism.pdf">Hasochism - The Pleasure and Pain of Dependently Typed Haskell Programming</a></p>
+<ol style="list-style-type: decimal">
+<li>Kinds</li>
+<li>GADT - <a href="https://en.wikibooks.org/wiki/Haskell/GADT" class="uri">https://en.wikibooks.org/wiki/Haskell/GADT</a></li>
+<li><p>Type promotion - <a href="https://github.com/slindley/dependent-haskell" class="uri">https://github.com/slindley/dependent-haskell</a> <!--
+``` {.haskell}
+    data Nat = Z | S Nat
+    data Vec :: Nat -> * -> * where
+    vhead :: Vec (S n) a -> a
+```
+--></p></li>
+<li><p>Type Families</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">   <span class="kw">type</span> family (<span class="ot">m::</span><span class="dt">Nat</span>) <span class="fu">:+</span> (<span class="ot">n::</span><span class="dt">Nat</span>)<span class="ot"> ::</span> <span class="dt">Nat</span>
+<span class="ot">   vappend ::</span> <span class="dt">Vec</span> m a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a
+   <span class="fu">?</span><span class="ot"> ::</span> <span class="dt">Vec</span>(m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> (<span class="dt">Vec</span> m a, <span class="dt">Vec</span> n a)</code></pre></div></li>
+<li><p>Dynamic dependencies, singletons</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">   <span class="kw">data</span> <span class="dt">Natty</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="fu">*</span>
+<span class="ot">   vchop ::</span> <span class="dt">Natty</span> m <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> (<span class="dt">Vec</span> m a, <span class="dt">Vec</span> n a)
+   <span class="fu">?</span><span class="ot"> ::</span> <span class="dt">Natty</span> m <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a</code></pre></div></li>
+</ol>
+</div>
+<div id="plan-b" class="slide section level1">
+<h1>Plan B</h1>
+<ol start="6" style="list-style-type: decimal">
+<li><p>Static dependencies, Proxy</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">   <span class="kw">data</span> <span class="dt">NP</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span> <span class="dt">NP</span><span class="ot"> ::</span> <span class="dt">NP</span> n
+<span class="ot">   vtake1 ::</span> <span class="dt">Natty</span> m <span class="ot">-&gt;</span> <span class="dt">NP</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a</code></pre></div></li>
+<li><p>Kind polymorphism</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">   <span class="kw">data</span> <span class="dt">Proxy</span><span class="ot"> ::</span> k <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span> <span class="dt">Proxy</span><span class="ot"> ::</span> <span class="dt">Proxy</span> i
+<span class="ot">   vtake2 ::</span> <span class="dt">Natty</span> m <span class="ot">-&gt;</span> <span class="dt">Proxy</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a</code></pre></div></li>
+<li><p>TypeApplication, getting rid of Proxy</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- &gt;&gt;&gt; let v = 1 :&gt; (1 :&gt; (1 :&gt; V0)); two = SS(SS SZ) in vtake4 two v</span>
+<span class="co">-- 1 :&gt; (1 :&gt; V0)</span>
+<span class="ot">vtake4 ::</span> forall n m a<span class="fu">.</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a</code></pre></div></li>
+<li><p>Type equality and proofs</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> a <span class="fu">:~:</span> b <span class="fu">=</span> (a <span class="fu">~</span> b) <span class="ot">=&gt;</span> <span class="dt">Refl</span>
+<span class="ot">plus_id_r ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> n <span class="fu">:+</span> <span class="dt">Z</span> <span class="fu">:~:</span> n</code></pre></div></li>
+</ol>
+</div>
+<div id="kinds" class="slide section level1">
+<h1>Kinds</h1>
+<ul>
+<li><p>Operations on values are described by types</p></li>
+<li><p>Operations on types are described by kinds</p></li>
+<li><p>Types (e.g. <code>Int</code>) are of kind <code>*</code></p></li>
+<li><p>One argument constructors (e.g. <code>Maybe</code>) are of kind <code>* -&gt; *</code></p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Functor</span> f <span class="ot">=&gt;</span> <span class="dt">Pointed</span> (<span class="ot">f ::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span>) <span class="kw">where</span>
+<span class="ot">    pure ::</span> forall (<span class="ot">a ::</span> <span class="fu">*</span>)<span class="fu">.</span>a <span class="ot">-&gt;</span> f a</code></pre></div></li>
+<li><p>There exist also more complex kinds, e.g. for monad transformers:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">MonadTrans</span> (<span class="ot">t ::</span> (<span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span>) <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span>) <span class="kw">where</span>
+<span class="ot">    lift ::</span> <span class="dt">Monad</span> (<span class="ot">m ::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span>) <span class="ot">=&gt;</span> forall (<span class="ot">a ::</span> <span class="fu">*</span>)<span class="fu">.</span>m a <span class="ot">-&gt;</span> t m a</code></pre></div></li>
+</ul>
+<p>GHC has also an internal kind <code>#</code> for unboxed types (e.g. <code>Int#</code>)</p>
+<p>As we shall see, more kinds may be introduced.</p>
+</div>
+<div id="expr1" class="slide section level1">
+<h1>Expr1</h1>
+<p>Consider a simple expression evaluator:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Expr</span> <span class="fu">=</span> <span class="dt">I</span> <span class="dt">Int</span>
+          <span class="fu">|</span> <span class="dt">Add</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+
+<span class="ot">eval ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+eval (<span class="dt">I</span> n)       <span class="fu">=</span> n
+eval (<span class="dt">Add</span> e1 e2) <span class="fu">=</span> eval e1 <span class="fu">+</span> eval e2</code></pre></div>
+<p>What if we try to add <code>Bool</code>?</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Expr</span> <span class="fu">=</span> <span class="dt">I</span> <span class="dt">Int</span>
+          <span class="fu">|</span> <span class="dt">B</span> <span class="dt">Bool</span>
+          <span class="fu">|</span> <span class="dt">Add</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+          <span class="fu">|</span> <span class="dt">Eq</span>  <span class="dt">Expr</span> <span class="dt">Expr</span></code></pre></div>
+<p>What type should <code>eval</code> have?</p>
+</div>
+<div id="expr2" class="slide section level1">
+<h1>Expr2</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Expr</span> <span class="fu">=</span> <span class="dt">I</span> <span class="dt">Int</span>
+          <span class="fu">|</span> <span class="dt">B</span> <span class="dt">Bool</span>
+          <span class="fu">|</span> <span class="dt">Add</span> <span class="dt">Expr</span> <span class="dt">Expr</span>
+          <span class="fu">|</span> <span class="dt">Eq</span>  <span class="dt">Expr</span> <span class="dt">Expr</span>
+
+<span class="co">-- eval :: Either Int Bool ?</span>
+<span class="co">-- eval (Add (B True) (I 1)) = ?</span>
+
+<span class="ot">eval ::</span> <span class="dt">Expr</span> <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">Either</span> <span class="dt">Int</span> <span class="dt">Bool</span>)
+eval (<span class="dt">I</span> n)       <span class="fu">=</span> <span class="dt">Just</span> (<span class="dt">Left</span> n)
+eval (<span class="dt">B</span> n)       <span class="fu">=</span> <span class="dt">Just</span> (<span class="dt">Right</span> n)
+eval _ <span class="fu">=</span> undefined       <span class="co">-- Exercise</span></code></pre></div>
+<p>How can we make typechecker reject <code>eval (Add (B True) (I 1))</code> ?</p>
+</div>
+<div id="phantom-types" class="slide section level1">
+<h1>Phantom types</h1>
+<p>A phantom type is a parametrised type whose parameters do not all appear on the right-hand side of its definition</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+
+<span class="kw">data</span> <span class="dt">USD</span>
+<span class="kw">data</span> <span class="dt">EUR</span>
+
+<span class="kw">newtype</span> <span class="dt">Amount</span> a <span class="fu">=</span> <span class="dt">Amount</span> <span class="dt">Double</span>
+                 <span class="kw">deriving</span> (<span class="dt">Show</span>, <span class="dt">Eq</span>, <span class="dt">Ord</span>, <span class="dt">Num</span>)
+
+<span class="ot">usd ::</span> <span class="dt">Double</span> <span class="ot">-&gt;</span> <span class="dt">Amount</span> <span class="dt">USD</span>
+usd <span class="fu">=</span> <span class="dt">Amount</span>
+
+<span class="ot">eur ::</span> <span class="dt">Double</span> <span class="ot">-&gt;</span> <span class="dt">Amount</span> <span class="dt">EUR</span>
+eur <span class="fu">=</span> <span class="dt">Amount</span></code></pre></div>
+<pre><code>&gt; usd 5 + usd 5
+Amount 10.0
+&gt; usd 5 + eur 5
+
+&lt;interactive&gt;:4:9: error:
+    • Couldn&#39;t match type ‘EUR’ with ‘USD’
+      Expected type: Amount USD
+        Actual type: Amount EUR
+    • In the second argument of ‘(+)’, namely ‘eur 5’
+      In the expression: usd 5 + eur 5
+      In an equation for ‘it’: it = usd 5 + eur 5</code></pre>
+</div>
+<div id="expr3---phantom-types" class="slide section level1">
+<h1>Expr3 - Phantom types</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Expr</span> a <span class="fu">=</span> <span class="dt">I</span> <span class="dt">Int</span>
+            <span class="fu">|</span> <span class="dt">B</span> <span class="dt">Bool</span>
+            <span class="fu">|</span> <span class="dt">Add</span> (<span class="dt">Expr</span> <span class="dt">Int</span>) (<span class="dt">Expr</span> <span class="dt">Int</span>)
+            <span class="fu">|</span> <span class="dt">Eq</span>  (<span class="dt">Expr</span> <span class="dt">Int</span>) (<span class="dt">Expr</span> <span class="dt">Int</span>)
+
+
+<span class="ot">eval ::</span> <span class="dt">Expr</span> a <span class="ot">-&gt;</span> a
+eval (<span class="dt">I</span> n) <span class="fu">=</span> n <span class="co">-- Error: Couldn&#39;t match expected type ‘a’ with actual type ‘Int’</span></code></pre></div>
+<p>besides <code>Add (B True) (I 1)</code> still typechecks.</p>
+<p>The problem is that we have</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="dt">I</span><span class="ot"> ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> a
+<span class="dt">B</span><span class="ot"> ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> a
+<span class="dt">Add</span><span class="ot"> ::</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> a</code></pre></div>
+<p>but want rather</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="dt">I</span><span class="ot"> ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span>
+<span class="dt">B</span><span class="ot"> ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Bool</span>
+<span class="dt">Add</span><span class="ot"> ::</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span></code></pre></div>
+</div>
+<div id="gadts---generalised-abstract-data-types" class="slide section level1">
+<h1>GADTs - Generalised Abstract Data Types</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE StandaloneDeriving #-}</span>
+<span class="ot">{-# LANGUAGE GADTs #-}</span>
+
+<span class="kw">data</span> <span class="dt">Expr</span> a <span class="kw">where</span>
+  <span class="dt">I</span><span class="ot"> ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span>
+  <span class="dt">B</span><span class="ot"> ::</span> <span class="dt">Bool</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Bool</span>
+  <span class="dt">Add</span><span class="ot"> ::</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span>
+  <span class="dt">Eq</span><span class="ot">  ::</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Bool</span>
+  <span class="co">-- exercise: allow comparing booleans, e.g `Eq (B True) (B True)`</span>
+
+<span class="ot">eval ::</span> <span class="dt">Expr</span> a <span class="ot">-&gt;</span> a
+eval (<span class="dt">I</span> n)       <span class="fu">=</span> n
+eval (<span class="dt">B</span> b)       <span class="fu">=</span> b
+eval (<span class="dt">Add</span> e1 e2) <span class="fu">=</span> eval e1 <span class="fu">+</span> eval e2
+eval (<span class="dt">Eq</span>  e1 e2) <span class="fu">=</span> eval e1 <span class="fu">==</span> eval e2
+
+<span class="kw">deriving</span> <span class="kw">instance</span> <span class="dt">Show</span> (<span class="dt">Expr</span> a)</code></pre></div>
+</div>
+<div id="vec" class="slide section level1">
+<h1>Vec</h1>
+<p>Recall an example from the first lecture</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Zero</span>
+<span class="kw">data</span> <span class="dt">Succ</span> n
+
+<span class="kw">data</span> <span class="dt">Vec</span><span class="ot"> ::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span>
+  <span class="dt">VNil</span><span class="ot"> ::</span> <span class="dt">Vec</span> <span class="dt">Zero</span> a
+<span class="ot">  (:&gt;) ::</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (<span class="dt">Succ</span> n) a
+
+<span class="ot">vhead ::</span> <span class="dt">Vec</span> (<span class="dt">Succ</span> n) a <span class="ot">-&gt;</span> a
+vhead (x <span class="fu">:&gt;</span> xs) <span class="fu">=</span> x</code></pre></div>
+<p>Let us see how far we can go with dependent vectors in Haskell</p>
+</div>
+<div id="promotion" class="slide section level1">
+<h1>Promotion</h1>
+<p>If we have the <code>Nat</code> datatype, types for zero and successor can be automatically generated:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE GADTs, DataKinds, KindSignatures #-}</span>
+<span class="kw">data</span> <span class="dt">Nat</span><span class="ot"> ::</span> <span class="fu">*</span> <span class="kw">where</span>
+  <span class="dt">Z</span><span class="ot"> ::</span> <span class="dt">Nat</span>
+  <span class="dt">S</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Nat</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- This defines</span>
+<span class="co">-- Type Nat</span>
+<span class="co">-- Value constructors: Z, S</span>
+
+<span class="co">-- Promotion (lifting) to type level yields</span>
+<span class="co">-- kind Nat</span>
+<span class="co">-- type constructors: &#39;Z :: Nat; &#39;S :: Nat -&gt; Nat</span>
+<span class="co">-- &#39;s can be omitted in most cases, but...</span>
+
+<span class="co">-- data P          -- 1</span>
+<span class="co">-- data Prom = P   -- 2</span>
+<span class="co">-- type T = P      -- 1 or promoted 2?</span>
+<span class="co">-- quote disambiguates:</span>
+<span class="co">-- type T1 = P     -- 1</span>
+<span class="co">-- type T2 = &#39;P    -- promoted 2</span></code></pre></div>
+</div>
+<div id="vec-with-promoted-nat" class="slide section level1">
+<h1>Vec with promoted Nat</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Nat</span><span class="ot"> ::</span> <span class="fu">*</span> <span class="kw">where</span>
+  <span class="dt">Z</span><span class="ot"> ::</span> <span class="dt">Nat</span>
+  <span class="dt">S</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Nat</span>
+
+<span class="co">-- Nat is a kind, and so is Nat -&gt; * -&gt; *</span>
+<span class="kw">infixr</span> <span class="dv">6</span> <span class="fu">:&gt;</span>
+<span class="kw">data</span> <span class="dt">Vec</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span>
+  <span class="dt">V0</span><span class="ot">   ::</span> <span class="dt">Vec</span> <span class="ch">&#39;Z a</span>
+<span class="ot">  (:&gt;) ::</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (<span class="ch">&#39;S n) a</span>
+
+<span class="kw">deriving</span> <span class="kw">instance</span> (<span class="dt">Show</span> a) <span class="ot">=&gt;</span> <span class="dt">Show</span> (<span class="dt">Vec</span> n a)
+
+<span class="ot">vhead ::</span> <span class="dt">Vec</span> (<span class="dt">S</span> n) a <span class="ot">-&gt;</span> a
+vhead (x<span class="fu">:&gt;</span>_) <span class="fu">=</span> x</code></pre></div>
+<p><strong>Exercise:</strong> define <code>vtail</code> (the type requires more thought than the body)</p>
+</div>
+<div id="other-promotion-examples" class="slide section level1">
+<h1>Other promotion examples</h1>
+<p>Heterogenous lists:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">HList</span><span class="ot"> ::</span> [<span class="fu">*</span>] <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span> <span class="co">-- [*] is a list of types</span>
+  <span class="dt">HNil</span><span class="ot">  ::</span> <span class="dt">HList</span> <span class="ch">&#39;[]</span>
+  <span class="dt">HCons</span><span class="ot"> ::</span> a <span class="ot">-&gt;</span> <span class="dt">HList</span> t <span class="ot">-&gt;</span> <span class="dt">HList</span> (a <span class="ch">&#39;: t)</span>
+
+<span class="ot">foo0 ::</span> <span class="dt">HList</span> <span class="ch">&#39;[]</span>
+foo0 <span class="fu">=</span> <span class="dt">HNil</span>
+
+<span class="ot">foo1 ::</span> <span class="dt">HList</span> <span class="ch">&#39;[Int]</span>
+foo1 <span class="fu">=</span> <span class="dt">HCons</span> <span class="dv">3</span> <span class="dt">HNil</span>
+
+<span class="ot">foo2 ::</span> <span class="dt">HList</span> [<span class="dt">Int</span>, <span class="dt">Bool</span>]
+foo2 <span class="fu">=</span> undefined  <span class="co">-- (easy) exercise</span></code></pre></div>
+<p>It is in a sense a generalisation of vectors: <code>Nat ~ [()]</code></p>
+</div>
+<div id="vector-concatenation" class="slide section level1">
+<h1>Vector concatenation</h1>
+<p>We have seen that addition can be defined with classes:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Add</span> (<span class="ot">a::</span><span class="dt">Nat</span>) (<span class="ot">b::</span><span class="dt">Nat</span>) (<span class="ot">c::</span><span class="dt">Nat</span>)  <span class="kw">where</span>
+
+<span class="kw">instance</span> <span class="dt">Add</span> <span class="dt">Z</span> b b
+<span class="kw">instance</span> <span class="dt">Add</span> a b c <span class="ot">=&gt;</span> <span class="dt">Add</span> (<span class="dt">S</span> a) b (<span class="dt">S</span> c)
+
+<span class="ot">vappend ::</span> (<span class="dt">Add</span> m n r) <span class="ot">=&gt;</span> <span class="dt">Vec</span> m a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> s a
+vappend <span class="dt">V0</span> ys <span class="fu">=</span> ys</code></pre></div>
+<p>alas...</p>
+<pre><code>error: …
+    • Could not deduce: n ~ r
+      from the context: m ~ &#39;Z</code></pre>
+<p>The constraint checker cannot infer <code>n = r</code> from <code>m = 0</code></p>
+</div>
+<div id="type-families" class="slide section level1">
+<h1>Type families</h1>
+<p>Type families provide more data for the constraint checker</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> family (<span class="ot">n ::</span> <span class="dt">Nat</span>) <span class="fu">:+</span> (<span class="ot">m ::</span> <span class="dt">Nat</span>)<span class="ot"> ::</span> <span class="dt">Nat</span>
+<span class="kw">type</span> <span class="kw">instance</span> <span class="dt">Z</span> <span class="fu">:+</span> m <span class="fu">=</span> m
+<span class="kw">type</span> <span class="kw">instance</span> (<span class="dt">S</span> n) <span class="fu">:+</span> m <span class="fu">=</span> <span class="dt">S</span> (n <span class="fu">:+</span> m)
+
+<span class="ot">vapp ::</span> <span class="dt">Vec</span> m a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a
+vapp <span class="dt">V0</span> ys <span class="fu">=</span> ys
+vapp (x<span class="fu">:&gt;</span>xs) ys <span class="fu">=</span> x<span class="fu">:&gt;</span>(vapp xs ys)</code></pre></div>
+<p>Now <code>Z :+ m</code> can be reduced to <code>m</code> (at compile time)</p>
+<p><strong>Exercise:</strong> define multiplication</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> family (<span class="ot">n ::</span> <span class="dt">Nat</span>) <span class="fu">:*</span> (<span class="ot">m ::</span> <span class="dt">Nat</span>)<span class="ot"> ::</span> <span class="dt">Nat</span></code></pre></div>
+</div>
+<div id="indexing" class="slide section level1">
+<h1>Indexing</h1>
+<p>You have probably seen some variant of <code>Fin</code> in Coq/Idris</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- atIndex :: Vec n a -&gt; (m &lt; n) -&gt; a</span>
+
+<span class="co">-- | Fin n - numbers smaller than n</span>
+<span class="kw">data</span> <span class="dt">Fin</span> (<span class="ot">n::</span><span class="dt">Nat</span>) <span class="kw">where</span>
+    <span class="dt">FinZ</span><span class="ot"> ::</span> <span class="dt">Fin</span> (<span class="dt">S</span> n)          <span class="co">-- zero is less than any successor</span>
+    <span class="dt">FinS</span><span class="ot"> ::</span> <span class="dt">Fin</span> n <span class="ot">-&gt;</span> <span class="dt">Fin</span> (<span class="dt">S</span> n) <span class="co">-- n is less than (n+1)</span>
+
+<span class="ot">atIndex ::</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Fin</span> n <span class="ot">-&gt;</span> a
+atIndex (x<span class="fu">:&gt;</span>_) <span class="dt">FinZ</span> <span class="fu">=</span> x
+atIndex (_<span class="fu">:&gt;</span>xs) (<span class="dt">FinS</span> k) <span class="fu">=</span> atIndex xs k
+
+<span class="co">-- Exercise - why not:</span>
+<span class="co">-- atIndex :: Vec (S n) a -&gt; ... ?</span></code></pre></div>
+</div>
+<div id="replicate" class="slide section level1">
+<h1>Replicate</h1>
+<p>Let's try to define a vector counterpart of <code>replicate :: Int -&gt; a -&gt; [a]</code></p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">vreplicate ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a
+vreplicate <span class="dt">Z</span> _ <span class="fu">=</span> <span class="dt">V0</span>   <span class="co">--  Expected type: Vec n a</span>
+                      <span class="co">--  Actual type:   Vec &#39;Z a</span></code></pre></div>
+<p>more precisely, we would like</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">vreplicate2 ::</span> (<span class="ot">n::</span><span class="dt">Nat</span>) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a</code></pre></div>
+<p>...but <code>n::Nat</code> has no inhabitants</p>
+<p><em>Exercise:</em> try your own ideas for <code>vreplicate</code></p>
+<p>Before we implement <code>vreplicate</code> let us look at some other functions.</p>
+</div>
+<div id="vchop" class="slide section level1">
+<h1>vchop</h1>
+<p>We want to write a function dual to <code>vappend</code>, chopping a vector in two</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="fu">--|</span> chop a vector <span class="kw">in</span> two
+<span class="ot">vchop1 ::</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> (<span class="dt">Vec</span> m a, <span class="dt">Vec</span> n a)
+vchop1 _ _ <span class="fu">=</span> undefined</code></pre></div>
+<p>Can we at least write a test for it?</p>
+<pre><code>-- &gt;&gt;&gt; vchop1 (1 :&gt; 2 :&gt; V0)
+-- ???</code></pre>
+</div>
+<div id="vchop2" class="slide section level1">
+<h1>vchop2</h1>
+<p>We need to count to <code>m</code>. Here's an ugly solution:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Chop a vector in two, using first argument as a measure</span>
+<span class="co">-- &gt;&gt;&gt; vchop2 (undefined :&gt; V0) (1 :&gt; 2 :&gt; V0)</span>
+<span class="co">-- (1 :&gt; V0,2 :&gt; V0)</span>
+
+<span class="co">-- NB if we had `vreplicate`, we might write</span>
+<span class="co">-- vchop2 (vreplicate (S Z) undefined) (1 :&gt; 2 :&gt; V0)</span>
+
+<span class="ot">vchop2 ::</span> <span class="dt">Vec</span> m x <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> (<span class="dt">Vec</span> m a, <span class="dt">Vec</span> n a)
+vchop2 <span class="dt">V0</span> xs <span class="fu">=</span> (<span class="dt">V0</span>, xs)
+vchop2 (_<span class="fu">:&gt;</span>m) (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> (x<span class="fu">:&gt;</span>ys, zs) <span class="kw">where</span>
+  (ys, zs) <span class="fu">=</span> vchop2 m xs</code></pre></div>
+</div>
+<div id="singleton" class="slide section level1">
+<h1>Singleton</h1>
+<p>Using a vector is an overkill, we need just its length.</p>
+<p>But <code>Nat</code> is not precise enough; it's like <code>[a]</code> - no size checking.</p>
+<p>Idea: create a representant of every element of kind Nat</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- SNat n ~~ Vec n ()</span>
+<span class="kw">data</span> <span class="dt">SNat</span> (<span class="ot">n::</span><span class="dt">Nat</span>) <span class="kw">where</span>
+  <span class="dt">SZ</span><span class="ot"> ::</span> <span class="dt">SNat</span> <span class="dt">Z</span>
+  <span class="dt">SS</span><span class="ot"> ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> <span class="dt">SNat</span> (<span class="dt">S</span> n)
+<span class="kw">deriving</span> <span class="kw">instance</span> <span class="dt">Show</span>(<span class="dt">SNat</span> n)
+
+<span class="ot">add ::</span> (<span class="dt">SNat</span> m) <span class="ot">-&gt;</span> (<span class="dt">SNat</span> n) <span class="ot">-&gt;</span> <span class="dt">SNat</span>(m <span class="fu">:+</span> n)
+add <span class="dt">SZ</span> n <span class="fu">=</span> n
+add (<span class="dt">SS</span> m) n <span class="fu">=</span> <span class="dt">SS</span> (add m n)</code></pre></div>
+<p><strong>Exercise:</strong> define multiplication</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">mul ::</span> (<span class="dt">SNat</span> m) <span class="ot">-&gt;</span> (<span class="dt">SNat</span> n) <span class="ot">-&gt;</span> <span class="dt">SNat</span>(m <span class="fu">:*</span> n)</code></pre></div>
+</div>
+<div id="comparisons-and-another-way-of-vector-indexing" class="slide section level1">
+<h1>Comparisons and another way of vector indexing</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- # Comparison</span>
+<span class="kw">type</span> family (<span class="ot">m::</span><span class="dt">Nat</span>) <span class="fu">:&lt;</span> (<span class="ot">n::</span><span class="dt">Nat</span>)<span class="ot"> ::</span> <span class="dt">Bool</span>
+<span class="kw">type</span> <span class="kw">instance</span> m <span class="fu">:&lt;</span> <span class="ch">&#39;Z = &#39;</span><span class="dt">False</span>
+<span class="kw">type</span> <span class="kw">instance</span> <span class="ch">&#39;Z :&lt; (&#39;</span><span class="dt">S</span> n) <span class="fu">=</span> <span class="ch">&#39;True</span>
+<span class="kw">type</span> <span class="kw">instance</span> (<span class="ch">&#39;S m) :&lt; (&#39;</span><span class="dt">S</span> n) <span class="fu">=</span> m <span class="fu">:&lt;</span> n
+
+<span class="co">-- nth</span>
+<span class="ot">nth ::</span> (m<span class="fu">:&lt;</span>n) <span class="fu">~</span> <span class="ch">&#39;True =&gt; SNat m -&gt; Vec n a -&gt; a</span>
+nth <span class="dt">SZ</span> (a<span class="fu">:&gt;</span>_)  <span class="fu">=</span> a
+nth (<span class="dt">SS</span> m&#39;) (_<span class="fu">:&gt;</span>xs) <span class="fu">=</span> nth m&#39; xs</code></pre></div>
+<p>Apart from ordinary class constraints, we may use equality constraints.</p>
+<p><code>(m:&lt;n) ~ 'True</code> is an example of such a constraint</p>
+<p><code>nth</code> typechecks without this constraint, but so does <code>nth SZ V0</code> which is unsafe.</p>
+<p>With the constraint, we get:</p>
+<pre><code>&gt; nth SZ V0
+    • Couldn&#39;t match type ‘&#39;False’ with ‘&#39;True’
+        arising from a use of ‘nth’
+    • In the expression: nth SZ V0</code></pre>
+</div>
+<div id="vchop3" class="slide section level1">
+<h1>vchop3</h1>
+<p>With <code>SNat</code> we can implement <code>vchop</code> properly:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | chop a vector in two parts</span>
+<span class="co">-- &gt;&gt;&gt; vchop (SS SZ) (Vcons 1 (Vcons 2 V0))</span>
+<span class="co">-- (Vcons 1 V0,Vcons 2 V0)</span>
+vchop <span class="fu">=</span> vchop3
+<span class="ot">vchop3 ::</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">Vec</span>(m<span class="fu">:+</span>n) a <span class="ot">-&gt;</span> (<span class="dt">Vec</span> m a, <span class="dt">Vec</span> n a)
+vchop3 <span class="dt">SZ</span> xs <span class="fu">=</span> (<span class="dt">V0</span>, xs)
+vchop3 (<span class="dt">SS</span> m) (<span class="dt">Vcons</span> x xs) <span class="fu">=</span> (<span class="dt">Vcons</span> x ys, zs) <span class="kw">where</span>
+  (ys,zs) <span class="fu">=</span> vchop3 m xs</code></pre></div>
+</div>
+<div id="the-singletons-library" class="slide section level1">
+<h1>The singletons library</h1>
+<p>We can avoid writing singleton boilerplate using <a href="https://hackage.haskell.org/package/singletons">singletons</a> and TH</p>
+<pre><code>import Data.Singletons
+import Data.Singletons.TH
+
+
+$(singletons [d|
+    data Nat :: * where
+      Z :: Nat
+      S :: Nat -&gt; Nat
+
+    plus :: Nat -&gt; Nat -&gt; Nat
+    plus Z     m = m
+    plus (S n) m = S (plus n m)
+    |])
+
+vchop :: Sing m -&gt; Vec(Plus m n) a -&gt;  (Vec m a, Vec n a)
+vchop SZ xs = (V0, xs)
+vchop (SS m) (x:&gt;xs) = (x:&gt;ys, zs) where
+  (ys,zs) = vchop m xs</code></pre>
+</div>
+<div id="vreplicate" class="slide section level1">
+<h1>vreplicate</h1>
+<p>Also <code>vreplicate</code> becomes easy:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | `vreplicate n a` is a vector of n copies of a</span>
+<span class="co">-- &gt;&gt;&gt; vreplicate (SS SZ) 1</span>
+<span class="co">-- 1 :&gt; V0</span>
+<span class="co">-- &gt;&gt;&gt; vreplicate (SS (SS SZ)) 1</span>
+<span class="co">-- 1 :&gt; (1 :&gt; V0)</span>
+<span class="ot">vreplicate ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a
+vreplicate <span class="dt">SZ</span> _ <span class="fu">=</span> <span class="dt">V0</span>
+vreplicate (<span class="dt">SS</span> n) x <span class="fu">=</span> x <span class="fu">:&gt;</span> (vreplicate n x)</code></pre></div>
+<p><strong>Exercise:</strong> define</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">vcycle ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (n<span class="fu">:*</span>m) a</code></pre></div>
+</div>
+<div id="vtake" class="slide section level1">
+<h1>vtake</h1>
+<p>We want to define a vector counterpart of <code>take</code></p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE AllowAmbiguousTypes #-}</span>
+
+<span class="ot">vtake1 ::</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) <span class="ot">-&gt;</span> <span class="dt">Vec</span> m x
+vtake1  <span class="dt">SZ</span>     xs     <span class="fu">=</span> <span class="dt">V0</span>
+vtake1 (<span class="dt">SS</span> m) (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> x <span class="fu">:&gt;</span> vtake1 m xs</code></pre></div>
+<pre class="error"><code>error: …
+    • Could not deduce: (n1 :+ n0) ~ n2
+      from the context: m ~ &#39;S n1
+      Expected type: Vec (n1 :+ n0) a
+        Actual type: Vec n2 a
+      In the second argument of ‘vtake1’, namely ‘xs’
+      In the second argument of ‘(:&gt;)’, namely ‘vtake1 m xs’
+    • Relevant bindings include
+        xs :: Vec n2 a
+        m :: SNat n1</code></pre>
+<p>The compiler cannot type the recursive case.</p>
+<p>NB <code>AllowAmbiguousTypes</code> is needed if we want the compiler to even try to typecheck this.</p>
+</div>
+<div id="injectivity" class="slide section level1">
+<h1>Injectivity</h1>
+<pre><code>    • Could not deduce: (n1 :+ n0) ~ n2
+      from the context: m ~ &#39;S n1</code></pre>
+<p>The problem is whether <code>(m :+)</code> is injective.</p>
+<p><code>Maybe a ~ Maybe b =&gt; a ~ b</code></p>
+<p>but it's harder to see, if</p>
+<p><code>m :+ n0 ~ m :+ n1 =&gt; n0 ~ n1</code></p>
+<p>More precisely in the type</p>
+<p><code>vtake1 :: SNat m -&gt; Vec (m :+ n) -&gt; Vec m x</code></p>
+<p>we lack a &quot;handle&quot; on <code>n</code>; with real dependent types we would write</p>
+<pre><code>(m : Nat) -&gt; (n : Nat) -&gt; Vec (m + n) x -&gt; Vec m x</code></pre>
+</div>
+<div id="using-a-concrete-handle" class="slide section level1">
+<h1>Using a concrete handle</h1>
+<p>we lack a &quot;handle&quot; on <code>n</code>; with real dependent types we would write</p>
+<pre><code>(m : Nat) -&gt; (n : Nat) -&gt; Vec (m + n) x -&gt; Vec m x</code></pre>
+<p>So let us try translating this using singletons:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">vtake1&#39; ::</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a
+vtake1&#39; <span class="dt">SZ</span> _  _ <span class="fu">=</span> <span class="dt">V0</span>
+vtake1&#39; (<span class="dt">SS</span> m) n (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> x <span class="fu">:&gt;</span> vtake1&#39; m n xs</code></pre></div>
+<p>This works, but we need to pass an additional parameter - the length <code>n</code> of the vector remainder:</p>
+<pre><code>let v = 1 :&gt; (1 :&gt; (1 :&gt; V0)); two = SS(SS SZ) in vtake1&#39; two (SS SZ) v
+1 :&gt; (1 :&gt; V0)</code></pre>
+<p>But here we do not need the value of <code>n</code>, only its type.</p>
+</div>
+<div id="proxy---an-abstract-handle" class="slide section level1">
+<h1><code>Proxy</code> - an abstract handle</h1>
+<p>Let us try to build an abstract handle:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Nat Proxy</span>
+<span class="kw">data</span> <span class="dt">NP</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span> <span class="dt">NP</span><span class="ot"> ::</span> <span class="dt">NP</span> n
+
+<span class="co">-- &gt;&gt;&gt; let v = 1 :&gt; (1 :&gt; (1 :&gt; V0)); two = SS(SS SZ) in vtake2 two NP v</span>
+<span class="co">-- 1 :&gt; (1 :&gt; V0)</span>
+<span class="ot">vtake2 ::</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">NP</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a
+vtake2 <span class="dt">SZ</span>     _ _ <span class="fu">=</span> <span class="dt">V0</span>
+vtake2 (<span class="dt">SS</span> m) n (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> x <span class="fu">:&gt;</span> vtake2 m n xs</code></pre></div>
+<p>Note: this is different from a singleton, which is a runtime value; a proxy is only needed during typechecking.</p>
+</div>
+<div id="a-universal-handle" class="slide section level1">
+<h1>A universal handle</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Nat Proxy</span>
+<span class="kw">data</span> <span class="dt">NP</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span> <span class="dt">NP</span><span class="ot"> ::</span> <span class="dt">NP</span> n</code></pre></div>
+<p>there is no reason why our handle should depend on <code>Nat</code>, so why not make it polymorphic?</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE PolyKinds #-}</span>
+<span class="co">-- | Generic Proxy</span>
+<span class="kw">data</span> <span class="dt">Proxy</span><span class="ot"> ::</span> k <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span>
+  <span class="dt">Proxy</span><span class="ot"> ::</span> <span class="dt">Proxy</span> (<span class="ot">i::</span>k)
+
+<span class="co">-- &gt;&gt;&gt; let v = 1 :&gt; (1 :&gt; (1 :&gt; V0)); two = SS(SS SZ) in vtake3 two Proxy v</span>
+<span class="co">-- 1 :&gt; (1 :&gt; V0)</span>
+<span class="ot">vtake3 ::</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">Proxy</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a
+vtake3 <span class="dt">SZ</span>     _ _ <span class="fu">=</span> <span class="dt">V0</span>
+vtake3 (<span class="dt">SS</span> m) n (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> x <span class="fu">:&gt;</span> vtake3 m n xs</code></pre></div>
+<p><strong>Uwaga:</strong> <code>k</code> is a kind variable, hence the need for <code>PolyKinds</code></p>
+</div>
+<div id="back-to-the-future-or-another-take-on-vtake1" class="slide section level1">
+<h1>Back to the future or another take on vtake1</h1>
+<p>Since 8.0 GHC allows explicit type applications, e.g.</p>
+<pre><code>Prelude&gt; :set -XTypeApplications
+Prelude&gt; :t read
+read :: Read a =&gt; String -&gt; a
+Prelude&gt; read @Int &quot;42&quot;
+42
+Prelude&gt; read @Double &quot;42&quot;
+42.0</code></pre>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- vtake4 requires:</span>
+<span class="co">-- {-# LANGUAGE ScopedTypeVariables #-}</span>
+<span class="co">-- {-# LANGUAGE TypeApplications #-}</span>
+
+<span class="co">-- &gt;&gt;&gt; let v = 1 :&gt; (1 :&gt; (1 :&gt; V0)); two = SS(SS SZ) in vtake4 two v</span>
+<span class="co">-- 1 :&gt; (1 :&gt; V0)</span>
+<span class="ot">vtake4 ::</span> forall n m a<span class="fu">.</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m <span class="fu">:+</span> n) a <span class="ot">-&gt;</span> <span class="dt">Vec</span> m a
+vtake4 <span class="dt">SZ</span> _ <span class="fu">=</span> <span class="dt">V0</span>
+vtake4 (<span class="dt">SS</span> m) (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> x <span class="fu">:&gt;</span> vtake4 <span class="fu">@</span>n m xs</code></pre></div>
+</div>
+<div id="reversing-vec" class="slide section level1">
+<h1>Reversing Vec</h1>
+<p>Let's try a naive vector reverse:</p>
+<pre><code>rev1 :: Vec n a -&gt; Vec n a
+vrev1 V0 = V0
+vrev1 (x:&gt;xs) = vapp (vrev1 xs) (x:&gt;V0)</code></pre>
+<p>As you might suspect, this does not work:</p>
+<pre><code>    • Could not deduce: (n1 :+ &#39;S &#39;Z) ~ &#39;S n1
+      from the context: n ~ &#39;S n1</code></pre>
+<p>Oh noes, we need to prove <code>n + 1 ~ S n</code></p>
+</div>
+<div id="vrev2" class="slide section level1">
+<h1>vrev2</h1>
+<p>We may work around this using a speccialized &quot;append one&quot; function:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | vrev2</span>
+<span class="co">-- &gt;&gt;&gt; vrev2 (1:&gt;2:&gt;3:&gt;V0)</span>
+<span class="co">-- 3 :&gt; (2 :&gt; (1 :&gt; V0))</span>
+<span class="ot">vrev2 ::</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a
+vrev2 <span class="dt">V0</span> <span class="fu">=</span> <span class="dt">V0</span>
+vrev2 (x<span class="fu">:&gt;</span>xs) <span class="fu">=</span> snoc (vrev2 xs) x
+
+<span class="ot">snoc ::</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (<span class="dt">S</span> n) a
+snoc <span class="dt">V0</span> y <span class="fu">=</span> y <span class="fu">:&gt;</span> <span class="dt">V0</span>
+snoc (x<span class="fu">:&gt;</span>xs) y <span class="fu">=</span> x <span class="fu">:&gt;</span> snoc xs y</code></pre></div>
+<p>but we would prefer to use append we have already written.</p>
+</div>
+<div id="better-reverse-with-an-accumulator" class="slide section level1">
+<h1>Better reverse with an accumulator</h1>
+<pre><code>vrev3 :: Vec n a -&gt; Vec n a
+vrev3 xs = vaccrev V0 xs
+
+vaccrev :: Vec n a -&gt; Vec m a -&gt; Vec (n :+ m) a
+vaccrev acc V0 = acc</code></pre>
+<p>Oh noes, now we fail even in the base case:</p>
+<pre><code>    • Could not deduce: (n :+ &#39;Z) ~ n</code></pre>
+<p>Now we need to prove <code>n + 0 ~ n</code> too.</p>
+</div>
+<div id="type-equality-and-proofs" class="slide section level1">
+<h1>Type Equality and proofs</h1>
+<p>After the Idris/Coq part, this should seem familiar:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- cf Data.Type.Equality</span>
+
+infix <span class="dv">4</span> <span class="fu">:~:</span>
+
+<span class="kw">data</span> a <span class="fu">:~:</span> b <span class="kw">where</span>
+  <span class="dt">Refl</span><span class="ot"> ::</span>  a <span class="fu">:~:</span> a
+<span class="co">-- data a :~: b = (a ~ b) =&gt; Refl</span>
+
+<span class="ot">sym ::</span> (a <span class="fu">:~:</span> b) <span class="ot">-&gt;</span> (b <span class="fu">:~:</span> a)
+sym <span class="dt">Refl</span> <span class="fu">=</span> <span class="dt">Refl</span>  <span class="co">-- seems trivial, but see if you can simplify it...</span>
+
+<span class="ot">trans ::</span> (a <span class="fu">:~:</span> b) <span class="ot">-&gt;</span> (b <span class="fu">:~:</span> c) <span class="ot">-&gt;</span> (a <span class="fu">:~:</span> c)
+trans <span class="dt">Refl</span> <span class="dt">Refl</span> <span class="fu">=</span> <span class="dt">Refl</span>
+
+<span class="ot">cong ::</span> forall f a b<span class="fu">.</span>a <span class="fu">:~:</span> b <span class="ot">-&gt;</span> f a <span class="fu">:~:</span> f b
+cong <span class="dt">Refl</span> <span class="fu">=</span> <span class="dt">Refl</span>
+
+<span class="co">-- (a ~ b) implies (f a) implies (f b)</span>
+<span class="ot">subst ::</span> a <span class="fu">:~:</span> b <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> f b
+subst <span class="dt">Refl</span> <span class="fu">=</span> id</code></pre></div>
+</div>
+<div id="some-proofs" class="slide section level1">
+<h1>Some proofs</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- Trivial lemma: 0+n ~ n; explicit quantification</span>
+<span class="ot">plus_id_l ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> <span class="dt">Z</span> <span class="fu">:+</span> n <span class="fu">:~:</span> n
+plus_id_l _ <span class="fu">=</span> <span class="dt">Refl</span>
+
+<span class="co">-- implicit quantification</span>
+<span class="ot">plus_id_l_impl ::</span> n <span class="fu">:~:</span> <span class="dt">Z</span> <span class="fu">:+</span> n
+plus_id_l_impl <span class="fu">=</span> <span class="dt">Refl</span>
+
+<span class="co">-- Prove by induction: n+0 ~ n</span>
+<span class="co">-- Pattern-match on n, so explicit quantification</span>
+<span class="co">-- Compare with Coq Agda or Idris</span>
+<span class="ot">plus_id_r ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> n <span class="fu">:+</span> <span class="dt">Z</span> <span class="fu">:~:</span> n
+plus_id_r <span class="dt">SZ</span> <span class="fu">=</span> <span class="dt">Refl</span>
+plus_id_r (<span class="dt">SS</span> m) <span class="fu">=</span> cong <span class="fu">@</span><span class="dt">S</span> (plus_id_r m)
+<span class="co">-- @S is optional above, added only for clarity</span></code></pre></div>
+</div>
+<div id="provably-safe-casts" class="slide section level1">
+<h1>Provably safe casts</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Typesafe cast using propositional equality</span>
+<span class="co">-- simple but not very useful (subst is more powerful)</span>
+<span class="ot">castWith ::</span> (a <span class="fu">:~:</span> b) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> b
+castWith <span class="dt">Refl</span> x <span class="fu">=</span> x
+
+<span class="co">-- | Generalised form of typesafe cast</span>
+<span class="ot">gcastWith ::</span> (a <span class="fu">:~:</span> b) <span class="ot">-&gt;</span> (a <span class="fu">~</span> b <span class="ot">=&gt;</span> r) <span class="ot">-&gt;</span> r
+gcastWith <span class="dt">Refl</span> x <span class="fu">=</span> x
+
+<span class="ot">simpl0r ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> f (n<span class="fu">:+</span><span class="dt">Z</span>) <span class="ot">-&gt;</span> f n
+<span class="co">-- Special case: Vec (n:+Z) a -&gt; Vec n a</span>
+simpl0r n v <span class="fu">=</span> castWith (cong (plus_id_r n)) v
+<span class="co">-- simpl0r n v = subst (plus_id_r n) v</span>
+
+<span class="ot">expand0r ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> f n <span class="ot">-&gt;</span> f(n<span class="fu">:+</span><span class="dt">Z</span>)
+expand0r n x <span class="fu">=</span> subst (sym (plus_id_r n)) x
+
+<span class="co">-- Instead of `subst ... sym` we can put the constraint solver to work</span>
+<span class="co">-- you can think of it as a kind of tactic</span>
+<span class="ot">expand0r&#39; ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> f n <span class="ot">-&gt;</span> f(n<span class="fu">:+</span><span class="dt">Z</span>)
+expand0r&#39; n x <span class="fu">=</span> gcastWith (plus_id_r n) x</code></pre></div>
+</div>
+<div id="one-more-lemma" class="slide section level1">
+<h1>One more lemma</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- n + S m ~ S(m+n)</span>
+<span class="co">-- implicit m, explicit n</span>
+<span class="ot">plus_succ_r ::</span> forall m n<span class="fu">.</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> n <span class="fu">:+</span> <span class="dt">S</span> m <span class="fu">:~:</span> <span class="dt">S</span>(n <span class="fu">:+</span> m)
+plus_succ_r <span class="dt">SZ</span> <span class="fu">=</span> <span class="dt">Refl</span>
+plus_succ_r (<span class="dt">SS</span> n1) <span class="fu">=</span> cong <span class="fu">@</span><span class="dt">S</span> (plus_succ_r <span class="fu">@</span>m n1)
+
+<span class="co">-- explicit m, n</span>
+<span class="ot">plus_succ_r2 ::</span> <span class="dt">SNat</span> n <span class="ot">-&gt;</span> <span class="dt">SNat</span> m <span class="ot">-&gt;</span> n <span class="fu">:+</span> <span class="dt">S</span> m <span class="fu">:~:</span> <span class="dt">S</span>(n <span class="fu">:+</span> m)
+plus_succ_r2 <span class="dt">SZ</span> m <span class="fu">=</span> <span class="dt">Refl</span>
+plus_succ_r2 (<span class="dt">SS</span> n1) m <span class="fu">=</span> cong <span class="fu">@</span><span class="dt">S</span> (plus_succ_r2 n1 m)</code></pre></div>
+</div>
+<div id="type-safe-reverse" class="slide section level1">
+<h1>Type-safe reverse</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">rev ::</span> [a] <span class="ot">-&gt;</span> [a]
+rev [] <span class="fu">=</span> []
+rev xs <span class="fu">=</span> go [] xs <span class="kw">where</span>
+  go acc [] <span class="fu">=</span> acc
+  go acc (h<span class="fu">:</span>t) <span class="fu">=</span> go (h<span class="fu">:</span>acc) t
+
+<span class="ot">accrev ::</span> <span class="dt">Vec</span> a n <span class="ot">-&gt;</span> <span class="dt">Vec</span> a n
+accrev <span class="dt">V0</span> <span class="fu">=</span> <span class="dt">V0</span>
+accrev xs <span class="fu">=</span> go <span class="dt">SZ</span> <span class="dt">V0</span> xs <span class="kw">where</span>
+<span class="ot">  by ::</span> (x <span class="fu">~</span> y <span class="ot">=&gt;</span> r) <span class="ot">-&gt;</span> (x <span class="fu">:~:</span> y) <span class="ot">-&gt;</span> r
+  value <span class="ot">`by`</span> proof <span class="fu">=</span> gcastWith proof value
+<span class="ot">  go ::</span> forall m n a<span class="fu">.</span><span class="dt">SNat</span> n <span class="ot">-&gt;</span> <span class="dt">Vec</span> a n <span class="ot">-&gt;</span> <span class="dt">Vec</span> a m <span class="ot">-&gt;</span> <span class="dt">Vec</span> a (n<span class="fu">:+</span>m)
+  go alen acc <span class="dt">V0</span>     <span class="fu">=</span> acc
+                       <span class="ot">`by`</span> plus_id_r alen
+  go alen acc (h<span class="fu">:&gt;</span>t) <span class="fu">=</span>  go (<span class="dt">SS</span> alen) (h<span class="fu">:&gt;</span>acc) t 
+                       <span class="ot">`by`</span> (plus_succ_r2 alen (size t)) <span class="co">-- x + S y ~ S(x+y)         </span>
+
+<span class="co">-- expand0r :: SNat n -&gt; f n -&gt; f(n:+Z)</span>
+<span class="co">-- plus_succ_r2 :: SNat n -&gt; SNat m -&gt; n :+ S m :~: S(n :+ m)</span>
+
+main <span class="fu">=</span> print <span class="fu">$</span> accrev <span class="fu">$</span> <span class="dv">1</span> <span class="fu">:&gt;</span> <span class="dv">2</span> <span class="fu">:&gt;</span> <span class="dv">3</span> <span class="fu">:&gt;</span> <span class="dt">V0</span>
+
+<span class="ot">size ::</span> <span class="dt">Vec</span> a n <span class="ot">-&gt;</span> <span class="dt">SNat</span> n
+size <span class="dt">V0</span> <span class="fu">=</span> <span class="dt">SZ</span>
+size (_<span class="fu">:&gt;</span>t) <span class="fu">=</span> <span class="dt">SS</span> (size t)</code></pre></div>
+</div>
+<div id="exercises" class="slide section level1">
+<h1>Exercises</h1>
+<p>Exercise: implement a vector variant of</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">naiverev ::</span> [a] <span class="ot">-&gt;</span> [a]
+naiverev [] <span class="fu">=</span> []
+naiverev (x<span class="fu">:</span>xs) <span class="fu">=</span> naiverev xs <span class="fu">++</span> [x]</code></pre></div>
+<p>Challenge: try to eliminate <code>size</code> from <code>accrev</code> by using proxies or type app (there is <code>Data.Vect</code>, stackoverflow and blogs but try to roll your own before you peek at other solutions).</p>
+</div>
+<div id="questions" class="slide section level1">
+<h1>Questions?</h1>
+</div>
+<div id="type-level-literals" class="slide section level1">
+<h1>Type level literals</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE KindSignatures, DataKinds #-}</span>
+
+<span class="kw">import </span><span class="dt">GHC.TypeLits</span> (<span class="dt">Symbol</span>) <span class="co">-- strings promoted to types</span>
+<span class="kw">import </span><span class="dt">Data.Ratio</span> ((%))
+
+<span class="kw">newtype</span> <span class="dt">Money</span> (<span class="ot">currency ::</span> <span class="dt">Symbol</span>) <span class="fu">=</span> <span class="dt">Money</span> <span class="dt">Rational</span> <span class="kw">deriving</span> <span class="dt">Show</span>
+
+<span class="ot">fivePence ::</span> <span class="dt">Money</span> <span class="st">&quot;GBP&quot;</span>
+fivePence <span class="fu">=</span> <span class="dt">Money</span> (<span class="dv">5</span> <span class="fu">%</span> <span class="dv">100</span>)
+
+<span class="ot">twoEuros ::</span> <span class="dt">Money</span> <span class="st">&quot;EUR&quot;</span>
+twoEuros <span class="fu">=</span> <span class="dt">Money</span> <span class="dv">2</span>
+
+<span class="ot">add ::</span> <span class="dt">Money</span> c <span class="ot">-&gt;</span> <span class="dt">Money</span> c <span class="ot">-&gt;</span> <span class="dt">Money</span> c
+add (<span class="dt">Money</span> x) (<span class="dt">Money</span> y) <span class="fu">=</span> <span class="dt">Money</span> (x <span class="fu">+</span> y)
+
+<span class="co">-- &gt;&gt;&gt; add fivePence fivePence</span>
+<span class="co">-- Money (1 % 10)</span>
+
+<span class="co">-- &gt;&gt;&gt; add fivePence twoEuros</span>
+<span class="co">-- &lt;interactive&gt;:18:15: error:</span>
+<span class="co">--    • Couldn&#39;t match type ‘&quot;EUR&quot;’ with ‘&quot;GBP&quot;’</span>
+<span class="co">--      Expected type: Money &quot;GBP&quot;</span>
+<span class="co">--        Actual type: Money &quot;EUR&quot;</span></code></pre></div>
+</div>
+<div id="type-level-numbers-kind-level-tuples" class="slide section level1">
+<h1>Type level numbers, kind level tuples</h1>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE KindSignatures, DataKinds #-}</span>
+
+<span class="kw">import </span><span class="dt">GHC.TypeLits</span> (<span class="dt">Symbol</span>, <span class="dt">Nat</span>)
+
+<span class="kw">newtype</span> <span class="dt">Discrete</span> (<span class="ot">currency ::</span> <span class="dt">Symbol</span>) (<span class="ot">scale ::</span> (<span class="dt">Nat</span>, <span class="dt">Nat</span>))
+  <span class="fu">=</span> <span class="dt">Discrete</span> <span class="dt">Integer</span>
+
+<span class="ot">oneDollar ::</span> <span class="dt">Discrete</span> <span class="st">&quot;USD&quot;</span> <span class="ch">&#39;(1, 1)</span>
+oneDollar <span class="fu">=</span> <span class="dt">Discrete</span> <span class="dv">1</span>
+
+<span class="ot">oneDollarThirtyCents ::</span> <span class="dt">Discrete</span> <span class="st">&quot;USD&quot;</span> <span class="ch">&#39;(100, 1)</span>
+oneDollarThirtyCents <span class="fu">=</span> <span class="dt">Discrete</span> <span class="dv">130</span></code></pre></div>
+<p>In <code>scale :: (Nat, Nat)</code>, <code>(,)</code> is the tuple type promoted to a kind via DataKinds.</p>
+<p>In <code>'(100, 1), '(,)</code> is the tuple data constructor promoted to a type constructor.</p>
+</div>
+</body>
+</html>
